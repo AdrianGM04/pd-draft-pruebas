@@ -1,0 +1,299 @@
+[
+  {
+    "isMetric": false,
+    "insert": "D",
+    "angle": 9,
+    "lower": 0.002,
+    "upper": 0.038,
+    "step": 0.0005,
+    "inStock": false
+  },
+  {
+    "isMetric": false,
+    "insert": "D",
+    "angle": 9,
+    "lower": 0.038,
+    "upper": 0.08,
+    "step": 0.0005,        
+    "inStock": true
+  },
+  {
+    "isMetric": false,
+    "insert": "D",
+    "angle": 9,
+    "lower": 0.08,
+    "upper": 0.12,
+    "step": 0.001,
+    "inStock": true
+  },
+  {
+    "isMetric": false,
+    "insert": "D",
+    "angle": 9,
+    "lower": 0.12,
+    "upper": 2.0,
+    "step": 0.001,
+    "inStock": false
+  },
+  {
+    "isMetric": false,
+    "insert": "D",
+    "angle": 12,
+    "lower": 0.002,
+    "upper": 0.03,
+    "step": 0.0005,
+    "inStock": false
+  },
+  {
+    "isMetric": false,
+    "insert": "D",
+    "angle": 12,
+    "lower": 0.03,
+    "upper": 0.08,
+    "step": 0.0005,
+    "inStock": true
+  },
+  {
+    "isMetric": false,
+    "insert": "D",
+    "angle": 12,
+    "lower": 0.08,
+    "upper": 0.225,
+    "step": 0.001,
+    "inStock": true
+  },
+  {
+    "isMetric": false,
+    "insert": "D",
+    "angle": 12,
+    "lower": 0.225,
+    "upper": 2.0,
+    "step": 0.001,
+    "inStock": false
+  },
+  {
+    "isMetric": false,
+    "insert": "D",
+    "angle": 16,
+    "lower": 0.002,
+    "upper": 0.08,
+    "step": 0.001,
+    "inStock": false
+  },
+  {
+    "isMetric": false,
+    "insert": "D",
+    "angle": 16,
+    "lower": 0.08,
+    "upper": 0.225,
+    "step": 0.001,
+    "inStock": true
+  },
+  {
+    "isMetric": false,
+    "insert": "D",
+    "angle": 16,
+    "lower": 0.225,
+    "upper": 2.0,
+    "step": 0.001,
+    "inStock": false
+  },
+  {
+    "isMetric": false,
+    "insert": "P",
+    "angle": null,
+    "lower": 0.02,
+    "upper": 0.03,
+    "step": 0.001,
+    "inStock": false
+  },
+  {
+    "isMetric": false,
+    "insert": "P",
+    "angle": null,
+    "lower": 0.03,
+    "upper": 0.1,
+    "step": 0.001,
+    "inStock": true
+  },
+  {
+    "isMetric": false,
+    "insert": "P",
+    "angle": null,
+    "lower": 0.1,
+    "upper": 0.2,
+    "step": 0.002,
+    "inStock": true
+  },
+  {
+    "isMetric": false,
+    "insert": "P",
+    "angle": null,
+    "lower": 0.2,
+    "upper": 1.0,
+    "step": 0.005,
+    "inStock": true
+  },
+  {
+    "isMetric": false,
+    "insert": "P",
+    "angle": null,
+    "lower": 1.0,
+    "upper": 2.0,
+    "step": 0.005,
+    "inStock": false
+  },
+  {
+    "isMetric": true,
+    "insert": "D",
+    "angle": 9,
+    "lower": 0.2,
+    "upper": 0.75,
+    "step": 0.005,
+    "inStock": false
+  },
+  {
+    "isMetric": true,
+    "insert": "D",
+    "angle": 9,
+    "lower": 0.75,
+    "upper": 2.0,
+    "step": 0.01,
+    "inStock": true
+  },
+  {
+    "isMetric": true,
+    "insert": "D",
+    "angle": 9,
+    "lower": 2.0,
+    "upper": 4.0,
+    "step": 0.02,
+    "inStock": true
+  },
+  {
+    "isMetric": true,
+    "insert": "D",
+    "angle": 9,
+    "lower": 4.0,
+    "upper": 5.9,
+    "step": 0.05,
+    "inStock": true
+  },
+  {
+    "isMetric": true,
+    "insert": "D",
+    "angle": 9,
+    "lower": 5.9,
+    "upper": 25.0,
+    "step": 0.05,
+    "inStock": false
+  },
+  {
+    "isMetric": true,
+    "insert": "D",
+    "angle": 12,
+    "lower": 0.2,
+    "upper": 0.75,
+    "step": 0.005,
+    "inStock": false
+  },
+  {
+    "isMetric": true,
+    "insert": "D",
+    "angle": 12,
+    "lower": 0.75,
+    "upper": 2.0,
+    "step": 0.01,
+    "inStock": true
+  },
+  {
+    "isMetric": true,
+    "insert": "D",
+    "angle": 12,
+    "lower": 2.0,
+    "upper": 4.0,
+    "step": 0.02,
+    "inStock": true
+  },
+  {
+    "isMetric": true,
+    "insert": "D",
+    "angle": 12,
+    "lower": 4.0,
+    "upper": 5.9,
+    "step": 0.05,
+    "inStock": true
+  },
+  {
+    "isMetric": true,
+    "insert": "D",
+    "angle": 12,
+    "lower": 5.9,
+    "upper": 25.0,
+    "step": 0.05,
+    "inStock": false
+  },
+  {
+    "isMetric": true,
+    "insert": "D",
+    "angle": 16,
+    "lower": 0.2,
+    "upper": 3.0,
+    "step": 0.02,
+    "inStock": false
+  },
+  {
+    "isMetric": true,
+    "insert": "D",
+    "angle": 16,
+    "lower": 3.0,
+    "upper": 5.9,
+    "step": 0.05,
+    "inStock": true
+  },
+  {
+    "isMetric": true,
+    "insert": "D",
+    "angle": 16,
+    "lower": 5.9,
+    "upper": 25.0,
+    "step": 0.05,
+    "inStock": false
+  },
+  {
+    "isMetric": true,
+    "insert": "P",
+    "angle": null,
+    "lower": 0.5,
+    "upper": 1.0,
+    "step": 0.01,
+    "inStock": false
+  },
+  {
+    "isMetric": true,
+    "insert": "P",
+    "angle": null,
+    "lower": 1.0,
+    "upper": 2.5,
+    "step": 0.02,
+    "inStock": true
+  },
+  {
+    "isMetric": true,
+    "insert": "P",
+    "angle": null,
+    "lower": 2.5,
+    "upper": 6.1,
+    "step": 0.05,
+    "inStock": true
+  },
+  {
+    "isMetric": true,
+    "insert": "P",
+    "angle": null,
+    "lower": 6.1,
+    "upper": 25.0,
+    "step": 0.05,
+    "inStock": false
+  }
+]
