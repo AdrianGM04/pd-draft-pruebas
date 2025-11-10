@@ -4,6 +4,8 @@ import 'die_designer.dart';
 import 'pd_draft.dart';
 import '../models/globals.dart';
 
+
+// Se crea el estado inicial de la hubscreen de la APP
 class HubScreen extends StatefulWidget {
   const HubScreen({super.key});
 
@@ -11,6 +13,7 @@ class HubScreen extends StatefulWidget {
   State<HubScreen> createState() => _HubScreenState();
 }
 
+// Se inicia la pantalla con los datos iniciales de lenguaje y unidad
 class _HubScreenState extends State<HubScreen> {
   String _selectedLanguage = "English";
   String _selectedSystem = "Metric";
@@ -64,10 +67,12 @@ class _HubScreenState extends State<HubScreen> {
     );
   }
 
+  // Funcion que permite el movimiento entre apps dentro del hub
   void _navigateTo(BuildContext context, Widget page) {
     Navigator.push(context, MaterialPageRoute(builder: (_) => page));
   }
-
+  
+  // Se crearon los botones de lenguaje
   Widget _buildLanguageButtons() {
     final List<String> languages = ["English", "Español", "Français"];
     return Column(
@@ -99,6 +104,7 @@ class _HubScreenState extends State<HubScreen> {
     );
   }
 
+  // Se crearon los botones de sistemas de unidad
   Widget _buildSystemButtons() {
     final List<String> systems = ["Metric", "Imperial"];
     return Column(
@@ -130,6 +136,7 @@ class _HubScreenState extends State<HubScreen> {
     );
   }
 
+  // Cuerpo de la pantalla de hub
   @override
   Widget build(BuildContext context) {
     return Scaffold(

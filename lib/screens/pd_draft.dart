@@ -14,6 +14,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'calculo.dart';
 import '../models/globals.dart';
 
+// Se crea el estado de a pantalla de PD-Draft
 class OtraPantalla extends StatefulWidget {
   const OtraPantalla({super.key});
 
@@ -21,6 +22,7 @@ class OtraPantalla extends StatefulWidget {
   State<OtraPantalla> createState() => _OtraPantallaState();
 }
 
+// Se configura el estado del preview del pdf opreview
 class PdfPreviewScreen extends StatelessWidget {
   final Future<Uint8List> Function() buildPdf;
 
@@ -43,6 +45,7 @@ class PdfPreviewScreen extends StatelessWidget {
   }
 }
 
+// Se inicializan todas las variables, listas, arrays, y controladores de texto para que la app funcione
 class _OtraPantallaState extends State<OtraPantalla> {
   double zoomLevel = 1; // 1.0 = normal, >1 agranda, <1 reduce
   
@@ -155,11 +158,12 @@ class _OtraPantallaState extends State<OtraPantalla> {
   bool isManualAngle = false;
   bool isCustomDelta = false;
 
-  int? editingSheetIndex; // Para saber qué sheet se está editando
+  int? editingSheetIndex; 
   TextEditingController renameController = TextEditingController();
 
   List<String> filteredCarbonOptions = [];
 
+  // Funcion para generar el numero de parte que se puede ver en la tabla bajo el boton "Part Number"
   String generatePartNumber(double angle, double diameter, String selectedSystem, String prefix) {
     String angleStr = angle.toStringAsFixed(0);
     String sizeLetter;
@@ -195,6 +199,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     return "$prefix-$angleStr$sizeLetter$formattedDiameter";
   }
 
+  // Funcion para generar el numero de parte que se puede ver en la tabla bajo el boton "Pressure Number"
   String generatePressureNumber(double angle, double diameter, String selectedSystem, String prefix) {
     String angleStr;
     String sizeLetter;
@@ -223,7 +228,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     return "$prefix-$angleStr$sizeLetter$formattedDiameter";
   }
 
-
+  // Valores iniciales al momento de abrir PD-Draft o una nueva sheet
   @override
   void initState() {
     super.initState();
@@ -255,6 +260,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     loadSheetData(0);
   }
 
+  // Funcion que actualiza el valor de "# Dies"
   void updateDiesCount() {
     final int? dies = int.tryParse(diesController.text);
     if (dies != null && dies >= 1) {
@@ -269,6 +275,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     }
   }
 
+  // Funcion que aplica los valores metricos default
   void _applyMetricDefaults() {
     setState(() {
       selectedSystem = 'metric'; // Cambia al sistema seleccionado, no al global
@@ -287,6 +294,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     });
   }
 
+  // Al momento de picarle a "metric" en la ventana settings se aplican estos cambios
   void _applyMetric() {
     setState(() {
       selectedSystem = 'metric'; // Cambia al sistema seleccionado, no al global
@@ -308,6 +316,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     });
   }
 
+  // Funcion que aplica los valores imperiales default
   void _applyImperialDefaults() {
     setState(() {
       selectedSystem = 'imperial'; // Cambia al sistema seleccionado, no al global
@@ -326,6 +335,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     });
   }
 
+  // Al momento de picarle a "imperial" en la ventana settings se aplican estos cambios
   void _applyImperial() {
     setState(() {
       selectedSystem = 'imperial'; // Cambia al sistema seleccionado, no al global
@@ -346,6 +356,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     });
   }
 
+   // Funcion que actualiza el valor de "Decimals"
   void updateDecimals() {
     final int? decimals = int.tryParse(decimalsController.text);
     if (decimals != null && decimals >= 1) {
@@ -356,6 +367,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     }
   }
 
+   // Funcion que actualiza el valor de "Input Speed"
   void updateSpeed() {
     final double? finalSpeed= double.tryParse(finalSpeedController.text);
     if (finalSpeed != null && finalSpeed >= 1) {
@@ -366,6 +378,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     }
   }
 
+   // Funcion que actualiza el valor de "firstPressure"
   void updatePressurefirst() {
     final int? firstPressure = int.tryParse(firstDieController.text);
     if (firstPressure != null && firstPressure >= 1) {
@@ -375,6 +388,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     }
   }
 
+   // Funcion que actualiza el valor de "middlePressure"
   void updatePressuremiddle() {
     final int? middlePressure= int.tryParse(middleDiesController.text);
     if (middlePressure != null && middlePressure >= 1) {
@@ -384,6 +398,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     }
   }
 
+   // Funcion que actualiza el valor de "lastPressure"
   void updatePressurelast() {
     final int? lastPressure = int.tryParse(lastDieController.text);
     if (lastPressure != null && lastPressure >= 1) {
@@ -393,6 +408,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     }
   }
 
+   // Funcion que verifica que al editar diametros de manera manual sean posibles
   void validateDiameters() {
     final double? initial = double.tryParse(initialDiameterController.text);
     final double? finalD = double.tryParse(finalDiameterController.text);
@@ -408,6 +424,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     });
   }
 
+   // Funcion que actualiza el valor de "temperatureLimit"
   void updateTemperatureLimit() {
     final double? limit = double.tryParse(limitController.text);
     if (limit != null && limit > 0) {
@@ -418,6 +435,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     }
   }
 
+  // Funcion que ingresa los valores de presion puestos por el usuario
   void applyPressureDieValues() {
     setState(() {
       pressureDieValues = List.generate(numberOfDies + 1, (index) {
@@ -433,6 +451,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     
   }
 
+  // Funcion que guarda todas las variables de la app en mapas para poder utilizar multiples sheets
   void saveCurrentSheetData() {
     final current = sheets[currentSheetIndex];
     current.numberOfDies = int.tryParse(diesController.text) ?? 5;
@@ -473,6 +492,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
   }
 
+  // Funcion que carga los valores de las variables obtenidas de los mapas de sheets
   void loadSheetData(int index) {
     final data = sheets[index];
     setState(() {
@@ -537,11 +557,13 @@ class _OtraPantallaState extends State<OtraPantalla> {
     enviarDatosAlBackend();
   }
 
+  // Funcion que inicializa el proceso de exportacion de datos
   void onExportPressed() async {
-    saveCurrentSheetData();  // sincroniza todo
+    saveCurrentSheetData();  
     await exportSheetsToCSV(sheets);
   }
 
+  // Funcion para identificar la fecha actual al momento de presionar el apartado de "Date"
   Future<void> _selectDate() async {
      DateTime hoy = DateTime.now();
      int anio = hoy.year; 
@@ -563,6 +585,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
   }
 
+  // Funcion que envia los valores de la app al archivo calculo para hacer los calculos
   Future<Map<String, dynamic>?> enviarDatosAlBackend() async {
     final int? dies = int.tryParse(diesController.text);
     final double? initial = double.tryParse(initialDiameterController.text);
@@ -712,6 +735,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     return null;
   }
 
+  // Funcion que genera el numero de parte dentro del pdf
   String PDFPartNumber(double angle, double diameter, String selectedSystem, String prefix) {
     String angleStr = angle.toStringAsFixed(0);
     String sizeLetter;
@@ -746,6 +770,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     return "$prefix-$angleStr$sizeLetter$formattedDiameter";
   }
 
+  // Funcion que genera el numero de parte de presion dentro del pdf
   String PDFPressureNumber(double angle, double diameter, String selectedSystem, String? dieType,) {
     String prefix;
     switch (dieType) {
@@ -790,7 +815,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     return "$prefix-$angleStr$sizeLetter$formattedDiameter";
   }
 
-
+  // Funcion que limita el espacio que tiene la descripcion dentro del pdf
   String wrapDescription(String text, {int limit = 80}) {
     final words = text.split(' ');
     final buffer = StringBuffer();
@@ -1128,6 +1153,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   }
 
+  // Funcion que genera todo el cuerpo de las paginas de pdf
   Future<Uint8List> generarPDFBytes(
     List<double> diametros,
     List<dynamic> reductions,
@@ -1427,215 +1453,216 @@ class _OtraPantallaState extends State<OtraPantalla> {
     return pdf.save();
   }
 
+  // Funcion que controla los limite de las graficas dentro del pdf
   List<pw.Widget> _buildChartBars(
-    List<double> values, {
-    required int chartType,
-    List<double>? secondaryValues,
-  }) {
-    final List<pw.Widget> bars = [];
+      List<double> values, {
+      required int chartType,
+      List<double>? secondaryValues,
+    }) {
+      final List<pw.Widget> bars = [];
 
-    // Valores máximos y ancho total
-    final maxValue = chartType == 0
-        ? 300 // Temperatura
-        : chartType == 1
-            ? 3.7 // Delta
-            : 200; // Reducción
+      // Valores máximos y ancho total
+      final maxValue = chartType == 0
+          ? 300 // Temperatura
+          : chartType == 1
+              ? 3.7 // Delta
+              : 200; // Reducción
 
-    // Valor de ancho de píxeles
-    final barMaxWidth = chartType == 0
-        ? 200.0
-        : chartType == 1
-            ? 200.0
-            : 600.0;
+      // Valor de ancho de píxeles
+      final barMaxWidth = chartType == 0
+          ? 200.0
+          : chartType == 1
+              ? 200.0
+              : 600.0;
 
-    // Intervalos de tick
-    final tickStep = chartType == 0
-        ? 50.0
-        : chartType == 1
-            ? 0.5
-            : 15.0;
+      // Intervalos de tick
+      final tickStep = chartType == 0
+          ? 50.0
+          : chartType == 1
+              ? 0.5
+              : 15.0;
 
-    // Colores para las barras
-    final greenColor = chartType == 0
-        ? PdfColors.green
-        : chartType == 1
-            ? PdfColor.fromInt(0xFF103E64)
-            : PdfColor.fromInt(0xFF7556CA);
+      // Colores para las barras
+      final greenColor = chartType == 0
+          ? PdfColors.green
+          : chartType == 1
+              ? PdfColor.fromInt(0xFF103E64)
+              : PdfColor.fromInt(0xFF7556CA);
 
-    // Color para el rectángulo después del límite
-    final redColor = chartType == 0 ? PdfColors.red : null;
+      // Color para el rectángulo después del límite
+      final redColor = chartType == 0 ? PdfColors.red : null;
 
-    // Valor que controla la calibración entre tick y gráfico
-    final factorH = chartType == 0
-        ? 1.07
-        : chartType == 1
-            ? 1.02
-            : 1.04;
+      // Valor que controla la calibración entre tick y gráfico
+      final factorH = chartType == 0
+          ? 1.07
+          : chartType == 1
+              ? 1.02
+              : 1.04;
 
-    // Ticks superiores (solo para Delta)
-    if (chartType == 2 && secondaryValues != null) {
-      const deltaMax = 11.5;
-      const deltaStep = 0.5;
-      final upperTickWidgets = <pw.Widget>[];
+      // Ticks superiores (solo para Delta)
+      if (chartType == 2 && secondaryValues != null) {
+        const deltaMax = 11.5;
+        const deltaStep = 0.5;
+        final upperTickWidgets = <pw.Widget>[];
 
-      for (double tick = 0; tick <= deltaMax; tick += deltaStep) {
-        final tickPosition = (tick / deltaMax) * barMaxWidth + 13.2;
-        upperTickWidgets.add(
-          pw.Positioned(
-            left: tickPosition,
-            top: 0,
-            child: pw.Column(
+        for (double tick = 0; tick <= deltaMax; tick += deltaStep) {
+          final tickPosition = (tick / deltaMax) * barMaxWidth + 13.2;
+          upperTickWidgets.add(
+            pw.Positioned(
+              left: tickPosition,
+              top: 0,
+              child: pw.Column(
+                children: [
+                  pw.Text(tick.toStringAsFixed(1), style: pw.TextStyle(fontSize: 8)),
+                  pw.SizedBox(height: 2),
+                  pw.Container(width: 1, height: 5, color: PdfColors.black),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Leyenda de Delta (arriba)
+        bars.add(
+          pw.Container(
+            width: barMaxWidth,
+            alignment: pw.Alignment.centerRight,
+            padding: const pw.EdgeInsets.only(bottom: 6),
+            child: pw.Text(
+              "Delta (black)",
+              style: pw.TextStyle(fontSize: 9, color: PdfColors.black),
+            ),
+          ),
+        );
+
+        // Añadir ticks superiores antes de la gráfica
+        bars.add(
+          pw.Container(
+            width: barMaxWidth,
+            height: 20,
+            child: pw.Stack(children: upperTickWidgets),
+          ),
+        );
+
+      }
+
+      // Añadimos todas las barras de datos
+      for (int i = 1; i < values.length; i++) {
+        double value = values[i];
+
+        // Método de calibración individual de cada gráfico
+        if (chartType == 5) {
+          value = 30.0;
+        }
+
+        // Controlador del ancho del primer rectángulo de los gráficos
+        final greenWidth = value <= temperatureLimit
+            ? value * barMaxWidth * factorH / maxValue
+            : temperatureLimit * barMaxWidth * factorH / maxValue;
+
+        // Controlador del ancho del segundo rectángulo de los gráficos
+        final redWidth = value > temperatureLimit
+            ? (value - temperatureLimit) / maxValue * barMaxWidth
+            : 0.0;
+
+        // Modificador de posicionamiento en X de los ticks de los gráficos
+        final double xpos =
+            chartType == 0 ? 18 : chartType == 1 ? 4.7 : 16.3;
+
+        bars.add(
+          pw.Container(
+            height: 14,
+            margin: pw.EdgeInsets.symmetric(vertical: 2, horizontal: xpos),
+            child: pw.Stack(
               children: [
-                pw.Text(tick.toStringAsFixed(1), style: pw.TextStyle(fontSize: 8)),
-                pw.SizedBox(height: 2),
-                pw.Container(width: 1, height: 5, color: PdfColors.black),
+                // Barra de temperatura y reducción
+                pw.Positioned(
+                  left: 0,
+                  top: 0,
+                  child: pw.Row(
+                    children: [
+                      pw.Container(width: greenWidth, height: 10, color: greenColor),
+                      if (redWidth > 0)
+                        pw.Container(width: redWidth, height: 10, color: redColor),
+                    ],
+                  ),
+                ),
+                // Punto de delta
+                if (chartType == 2 &&
+                    secondaryValues != null &&
+                    i < secondaryValues.length)
+                  pw.Positioned(
+                    left: (secondaryValues[i] / 11.5) * barMaxWidth,
+                    top: 1,
+                    child: pw.Container(
+                      width: 8,
+                      height: 8,
+                      decoration: pw.BoxDecoration(
+                        color: PdfColors.black,
+                        shape: pw.BoxShape.circle,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
         );
       }
 
-      // Leyenda de Delta (arriba)
-      bars.add(
-        pw.Container(
-          width: barMaxWidth,
-          alignment: pw.Alignment.centerRight,
-          padding: const pw.EdgeInsets.only(bottom: 6),
-          child: pw.Text(
-            "Delta (black)",
-            style: pw.TextStyle(fontSize: 9, color: PdfColors.black),
+      // Ticks inferiores (para la métrica principal)
+      final tickWidgets = <pw.Widget>[];
+      for (double tick = 0; tick <= maxValue; tick += tickStep) {
+        final tickPosition = chartType == 0
+            ? (tick / maxValue) * barMaxWidth
+            : (tick / maxValue) * barMaxWidth + 15;
+        tickWidgets.add(
+          pw.Positioned(
+            left: tickPosition,
+            top: 0,
+            child: pw.Column(
+              children: [
+                pw.Container(width: 1, height: 5, color: PdfColors.black),
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  chartType == 1 ? tick.toStringAsFixed(1) : tick.toStringAsFixed(0),
+                  style: pw.TextStyle(fontSize: 8),
+                ),
+              ],
+            ),
           ),
-        ),
-      );
+        );
+      }
 
-      // Añadir ticks superiores antes de la gráfica
+      // Añadir ticks inferiores después de la gráfica
       bars.add(
         pw.Container(
           width: barMaxWidth,
           height: 20,
-          child: pw.Stack(children: upperTickWidgets),
+          child: pw.Stack(children: tickWidgets),
         ),
       );
 
-    }
-
-    // Añadimos todas las barras de datos
-    for (int i = 1; i < values.length; i++) {
-      double value = values[i];
-
-      // Método de calibración individual de cada gráfico
-      if (chartType == 5) {
-        value = 30.0;
-      }
-
-      // Controlador del ancho del primer rectángulo de los gráficos
-      final greenWidth = value <= temperatureLimit
-          ? value * barMaxWidth * factorH / maxValue
-          : temperatureLimit * barMaxWidth * factorH / maxValue;
-
-      // Controlador del ancho del segundo rectángulo de los gráficos
-      final redWidth = value > temperatureLimit
-          ? (value - temperatureLimit) / maxValue * barMaxWidth
-          : 0.0;
-
-      // Modificador de posicionamiento en X de los ticks de los gráficos
-      final double xpos =
-          chartType == 0 ? 18 : chartType == 1 ? 4.7 : 16.3;
-
-      bars.add(
-        pw.Container(
-          height: 14,
-          margin: pw.EdgeInsets.symmetric(vertical: 2, horizontal: xpos),
-          child: pw.Stack(
-            children: [
-              // Barra de temperatura y reducción
-              pw.Positioned(
-                left: 0,
-                top: 0,
-                child: pw.Row(
-                  children: [
-                    pw.Container(width: greenWidth, height: 10, color: greenColor),
-                    if (redWidth > 0)
-                      pw.Container(width: redWidth, height: 10, color: redColor),
-                  ],
-                ),
+      // Leyenda de Reducción (debajo)
+      if (chartType == 2) {
+        bars.add(
+          pw.Container(
+            width: barMaxWidth,
+            alignment: pw.Alignment.centerRight,
+            padding: const pw.EdgeInsets.only(top: 2, bottom: 6),
+            child: pw.Text(
+              "Reduction (purple)",
+              style: pw.TextStyle(
+                fontSize: 9,
+                color: PdfColor.fromInt(0xFF7556CA),
               ),
-              // Punto de delta
-              if (chartType == 2 &&
-                  secondaryValues != null &&
-                  i < secondaryValues.length)
-                pw.Positioned(
-                  left: (secondaryValues[i] / 11.5) * barMaxWidth,
-                  top: 1,
-                  child: pw.Container(
-                    width: 8,
-                    height: 8,
-                    decoration: pw.BoxDecoration(
-                      color: PdfColors.black,
-                      shape: pw.BoxShape.circle,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // Ticks inferiores (para la métrica principal)
-    final tickWidgets = <pw.Widget>[];
-    for (double tick = 0; tick <= maxValue; tick += tickStep) {
-      final tickPosition = chartType == 0
-          ? (tick / maxValue) * barMaxWidth
-          : (tick / maxValue) * barMaxWidth + 15;
-      tickWidgets.add(
-        pw.Positioned(
-          left: tickPosition,
-          top: 0,
-          child: pw.Column(
-            children: [
-              pw.Container(width: 1, height: 5, color: PdfColors.black),
-              pw.SizedBox(height: 2),
-              pw.Text(
-                chartType == 1 ? tick.toStringAsFixed(1) : tick.toStringAsFixed(0),
-                style: pw.TextStyle(fontSize: 8),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // Añadir ticks inferiores después de la gráfica
-    bars.add(
-      pw.Container(
-        width: barMaxWidth,
-        height: 20,
-        child: pw.Stack(children: tickWidgets),
-      ),
-    );
-
-    // Leyenda de Reducción (debajo)
-    if (chartType == 2) {
-      bars.add(
-        pw.Container(
-          width: barMaxWidth,
-          alignment: pw.Alignment.centerRight,
-          padding: const pw.EdgeInsets.only(top: 2, bottom: 6),
-          child: pw.Text(
-            "Reduction (purple)",
-            style: pw.TextStyle(
-              fontSize: 9,
-              color: PdfColor.fromInt(0xFF7556CA),
             ),
           ),
-        ),
-      );
-    }
+        );
+      }
 
-    bars.add(pw.SizedBox(height: 10));
+      bars.add(pw.SizedBox(height: 10));
 
-    return bars;
+      return bars;
   }
 
   // Función externa para redondeo personalizado
@@ -1663,7 +1690,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     return resultado;
   }
 
-  // Exportar CSV con file_saver (funciona en web y móvil)
+  // Exportar CSV 
   Future<void> exportSheetsToCSV(List<SheetData> sheets) async {
     StringBuffer buffer = StringBuffer();
 
@@ -1741,6 +1768,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     );
   }
 
+  // Importar CSV
   Future<List<SheetData>> importSheetsFromCustomCSV() async {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: false,
@@ -1795,6 +1823,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     return importedSheets;
   }
 
+  // Funcion que acomoda todas las variables en su debida posicion
   SheetData sheetFromMap(Map<String, dynamic> map) {
     return SheetData(
       // Si hay nombre asignado, lo usamos; si no, dejamos vacío y se generará Sheet N al mostrar
@@ -1870,6 +1899,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     );
   }
 
+  // Funny
   void magicDoohickey({required double paso, required bool esIncremento, }) async {
       const int maxIntentos = 10;
       int intentos = 0;
@@ -1922,6 +1952,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
       });
     }
 
+  // Funcion que limita la vista de porcentaje de carbones
   void actualizarCarbonOptions() {
     setState(() {
       // Obtenemos el índice del material seleccionado
@@ -1980,7 +2011,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
         toolbarHeight: 70,
         title: Image.asset(
           'assets/images/titulo5-logo.png',
-          height: 60, // ajusta según tamaño de tu imagen
+          height: 60,
           fit: BoxFit.contain,
         ),
       ),
@@ -2103,7 +2134,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
                       SizedBox(width: 6),
 
-                      // Final Speed + Output en la misma columna
+                      // Final Speed + Output
                       Expanded(
                         flex: 1,
                         child: Column(
@@ -2154,7 +2185,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Initial, Final, Dies
+                      // Initial, Final, # of Dies
                       for (var item in [
                         ["Initial Diameter", initialDiameterController, () => validateDiameters()],
                         ["Final Diameter", finalDiameterController, () => validateDiameters()],
