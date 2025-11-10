@@ -23,7 +23,7 @@ List<dynamic> jsonList = []; // Cambiar a List en lugar de Map
 
 Future<void> loadTable() async {
   try {
-    final jsonPath = resourcePath('assets/sdtcvbnm.json');  // assets/sdtcvbnm.json DEBUG 
+    final jsonPath = resourcePath('data/flutter_assets/assets/sdtcvbnm.json');  // assets/sdtcvbnm.json DEBUG 
     final file = File(jsonPath);                                                // data/flutter_assets/assets/sdtcvbnm.json RELEASE
     final contents = await file.readAsString();
     final decoded = jsonDecode(contents);
