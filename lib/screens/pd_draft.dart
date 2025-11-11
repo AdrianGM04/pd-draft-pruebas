@@ -2006,7 +2006,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 160, 164, 167), 
+        backgroundColor: const Color.fromARGB(255, 160, 164, 167),  // Cambiar el color del fondo del header
         centerTitle: true, 
         toolbarHeight: 70,
         title: Image.asset(
@@ -2018,12 +2018,12 @@ class _OtraPantallaState extends State<OtraPantalla> {
       body: Column(
         children: [
           Container(
-            color: Color(0xFFF1F4F8),
+            color: Color(0xFFF1F4F8), // Cambiar el color del fondo de la app
             child: Padding(
               padding: const EdgeInsets.all(6),
               child: Column(
                 children: [
-                  if (errorMessage != null)
+                  if (errorMessage != null) // Mensaje de errror al momento de hacer los calculos
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4.0),
                       child: Text(
@@ -2456,7 +2456,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                       children: [
                                         SizedBox(width: 8),
 
-                                        // Nuevo botón de mostrar tabla extra
+                                        // Botón de mostrar tabla de Part Numbers, boton booleano
                                         OutlinedButton(
                                           onPressed: () {
                                             setState(() {
@@ -2473,7 +2473,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
                                         SizedBox(width: 8),
 
-                                        // Nuevo botón de mostrar tabla extra
+                                        // Botón de mostrar tabla de Pressure Numbers, boton booleano
                                         OutlinedButton(
                                           onPressed: () {
                                             setState(() {
@@ -2490,7 +2490,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
                                         SizedBox(width: 8),
 
-                                        // Botón Paramount Stock Dies
+                                        // Botón Paramount Standard Dies
                                         OutlinedButton(
                                           onPressed: () {
                                             setState(() {
@@ -2536,7 +2536,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                         Align(
                                           alignment: Alignment.centerLeft,
                                           child: ConstrainedBox(
-                                            constraints: const BoxConstraints(maxWidth: 500), // Aumentamos un poco el ancho
+                                            constraints: const BoxConstraints(maxWidth: 500), 
                                             child: Padding(
                                               padding: const EdgeInsets.only(top: 24, bottom: 12),
                                               child: Table(
@@ -2562,7 +2562,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                       Padding(
                                                         padding: EdgeInsets.all(6.0),
                                                         child: Text(
-                                                          "Die Type", // Nuevo encabezado
+                                                          "Die Type", 
                                                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                                                         ),
                                                       ),
@@ -2596,7 +2596,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                           ),
                                                         ),
 
-                                                        // Nueva columna: Dropdown tipo de dado (String)
+                                                        // Dropdown tipo de dado (String)
                                                         Padding(
                                                           padding: const EdgeInsets.all(4.0),
                                                           child: DropdownButton<String>(
@@ -2613,7 +2613,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                                 )).toList();
                                                               }
 
-                                                              final double diametro = diameters[i]; // Obtenemos el diámetro de la fila
+                                                              final double diametro = diameters[i]; 
                                                               List<String> opciones;
 
                                                               // RANGOS DE DIÁMETRO CONDICIONALES SEGÚN SISTEMA
@@ -2710,7 +2710,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                                     angles[i],
                                                                     diameters[i],
                                                                     selectedSystem,
-                                                                    selectedDieTypes[i - 1] ?? "TR4", // ← Prefijo dinámico
+                                                                    selectedDieTypes[i - 1] ?? "TR4",
                                                                   )
                                                                 : "-",
                                                             style: const TextStyle(fontSize: 15),
@@ -2823,7 +2823,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                           ),
                                                         ),
 
-                                                        // Nueva columna: Dropdown tipo de dado (String)
+                                                        // Nueva columna: Dropdown tipo de dado
                                                         Padding(
                                                           padding: const EdgeInsets.all(6.0),
                                                           child: Text(
@@ -2991,7 +2991,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                     );
                                                   }
 
-                                                // Columna de diámetro con borde condicional
+                                                // Columna de diámetro
                                                 if (cellIndex == 1) {
                                                   
                                                   return GestureDetector(
@@ -3221,7 +3221,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                     );
                                                   }
 
-                                                  final targetIndex = index - 1; // <-- mapeo al array manualAngles
+                                                  final targetIndex = index - 1; // mapeo al array manualAngles
 
                                                   return GestureDetector(
                                                     onDoubleTap: () {

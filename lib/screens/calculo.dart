@@ -23,6 +23,7 @@ List<dynamic> jsonList = []; // Cambiar a List en lugar de Map
 
 Future<void> loadTable() async {
   try {
+    // El jsonPath sirve para identificar el listado de estandares de dados, para cuando se utilice standard dies
     final jsonPath = resourcePath('data/flutter_assets/assets/sdtcvbnm.json');  // assets/sdtcvbnm.json DEBUG 
     final file = File(jsonPath);                                                // data/flutter_assets/assets/sdtcvbnm.json RELEASE
     final contents = await file.readAsString();
@@ -59,32 +60,35 @@ double rootN(double value, double root) {
   return powerN(value, 1 / root);
 }
 
+// Funcion para calcular el proceso de trefilado linear
 List<double> calculateLinear(double inputVal, double finish, int steps, int decimals) {
-  List<double> arrDie = List.filled(steps + 1, 0.0);
+  List<double> arrDie = List.filled(steps + 1, 0.0); // Se inicializa una lista para que los valores de los diametros sean 0, la lista contiene dies + 1 espacios
   arrDie[0] = inputVal;
   arrDie[steps] = finish;
   
-  if (arrDie[0] * arrDie[steps] == 0) {
+  if (arrDie[0] * arrDie[steps] == 0) {  // En teoria no deberia nunca entrar esta exception, pero por si las dudas no detecta el primer valor de diametros o el final de diametros
     throw Exception("¡Falta el diámetro inicial o final!");
   }
   
-  double ratioLinear = rootN(arrDie[0] / arrDie[steps], steps.toDouble());
+  double ratioLinear = rootN(arrDie[0] / arrDie[steps], steps.toDouble()); // Obtiene la razon por la cual se van a hacer las disminuciones entre paso por paso
   for (int i = 1; i < steps; i++) {
     arrDie[i] = arrDie[i - 1] / ratioLinear;
   }
   
+  // Se regresa en un mapa los valores de diametros
   return arrDie.map((v) => double.parse(v.toStringAsFixed(decimals))).toList();
 }
 
+// Funcion para cakcykar el proceso de trefilado linear con skim pass
 List<double> calculateSkinPassLinear(double initialDiameter, double finishDiameter, double finalReduction, int dies, int decimals) {
   if (finalReduction <= 0 || finalReduction >= 100) {
-    throw Exception("Final reduction must be between 0 and 100");
+    throw Exception("Final reduction must be between 0 and 100"); // Se identifica si el valor de reduccion impuesto por el usuario esta entre los valores estipulados
   }
 
   double x = finalReduction / 100;
-  double dPenultimate = double.parse((finishDiameter / sqrt(1 - x)).toStringAsFixed(decimals));
+  double dPenultimate = double.parse((finishDiameter / sqrt(1 - x)).toStringAsFixed(decimals)); // Se va a realizar el proceso de trefilado linear, pero se limita hasta el penultimo valor
 
-  List<double> diametersToPenultimate = calculateLinear(
+  List<double> diametersToPenultimate = calculateLinear( // Se hace la llamada a la funcion original
     initialDiameter, dPenultimate, dies - 1, decimals);
 
   List<double> diameters = List.from(diametersToPenultimate)..add(finishDiameter);
@@ -92,11 +96,12 @@ List<double> calculateSkinPassLinear(double initialDiameter, double finishDiamet
   return diameters;
 }
 
+// Funcion para calclar el proceso de trefilado full taper
 List<double> calculateFullTaper(double initialDiameter, double finishDiameter, double lastReduction, int steps, int decimals) {
-  double ratioi = rootN(finishDiameter / initialDiameter, steps.toDouble());
+  double ratioi = rootN(finishDiameter / initialDiameter, steps.toDouble()); // Se obtiene la razon por la cual es recomendado reducir el diametro durante el proceso
   double avgReduction2 = 100 * (1 - pow(ratioi, 2)) as double;
 
-  double drAv = rootN(1 - avgReduction2 / 100, 2);
+  double drAv = rootN(1 - avgReduction2 / 100, 2);  // Mediante la formula dada por la empresa
   double drMin = rootN(1 - lastReduction / 100, 2);
   double drMax = pow(drAv, 2) / drMin;
   double dDrat = rootN(drMin / drMax, (steps - 1).toDouble());
