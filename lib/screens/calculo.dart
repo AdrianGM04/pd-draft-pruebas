@@ -45,6 +45,7 @@ Future<void> loadTable() async {
   }
 }
 
+// Calcula la potencia de un número
 double powerN(double base, double exponent) {
   if (base != 0) {
     return exp(exponent * log(base));
@@ -53,6 +54,7 @@ double powerN(double base, double exponent) {
   }
 }
 
+// Calcula la raíz n-ésima de un número
 double rootN(double value, double root) {
   if (root == 0) {
     root = 1.0;
@@ -96,12 +98,12 @@ List<double> calculateSkinPassLinear(double initialDiameter, double finishDiamet
   return diameters;
 }
 
-// Funcion para calclar el proceso de trefilado full taper
+// Funcion para calcular el proceso de trefilado full taper
 List<double> calculateFullTaper(double initialDiameter, double finishDiameter, double lastReduction, int steps, int decimals) {
   double ratioi = rootN(finishDiameter / initialDiameter, steps.toDouble()); // Se obtiene la razon por la cual es recomendado reducir el diametro durante el proceso
   double avgReduction2 = 100 * (1 - pow(ratioi, 2)) as double;
 
-  double drAv = rootN(1 - avgReduction2 / 100, 2);  // Mediante la formula dada por la empresa
+  double drAv = rootN(1 - avgReduction2 / 100, 2);
   double drMin = rootN(1 - lastReduction / 100, 2);
   double drMax = pow(drAv, 2) / drMin;
   double dDrat = rootN(drMin / drMax, (steps - 1).toDouble());
@@ -123,6 +125,7 @@ List<double> calculateFullTaper(double initialDiameter, double finishDiameter, d
   return diameters.map((v) => double.parse(v.toStringAsFixed(decimals))).toList();
 }
 
+// Funcion para calcular el proceso de trefilado full taper con skim pass
 List<double> calculateSkinPassFullTaper(double initialDiameter, double finishDiameter, double finalReduction, double lastReduction, int dies, int decimals) {
   if (finalReduction <= 0 || finalReduction >= 100) {
     throw Exception("Final reduction must be between 0 and 100");
@@ -140,6 +143,7 @@ List<double> calculateSkinPassFullTaper(double initialDiameter, double finishDia
   return fullTaper;
 }
 
+// Funcion para calclar el proceso de trefilado optimizado
 Map<String, List<double>> calculateOptimization(List<double> temperatures, int materialIndex, int dies, double carbon, double finishDiameter, double initialDiameter, double minTensile, double maxTensile, List<double> tensileTemp) {
   double averageTemp = temperatures.reduce((a, b) => a + b) / dies;
   double tensfact = 1;
@@ -176,6 +180,7 @@ Map<String, List<double>> calculateOptimization(List<double> temperatures, int m
   };
 }
 
+// Funcion para calclar el proceso de trefilado optimizado con skim pass
 Map<String, List<double>> calculateOptimizationSkinPass(List<double> temperatures, int materialIndex, int dies, double carbon, double finishDiameter, double initialDiameter, double minTensile, double maxTensile, List<double> tensileTemp, double finalReduction, int decimals) {
   if (finalReduction <= 0 || finalReduction >= 100) {
     throw Exception("Final reduction must be between 0 and 100");
@@ -243,6 +248,7 @@ Map<String, List<double>> calculateOptimizationSkinPass(List<double> temperature
   };
 }
 
+// Funcion para calclar el proceso de trefilado semi taper
 List<double> calculateSemiTaper(double initialDiameter, double finishDiameter, double maximumReductionPercentage,
     double finalReductionPercentage, int dies, int decimals) {
   
@@ -310,6 +316,7 @@ List<double> calculateSemiTaper(double initialDiameter, double finishDiameter, d
   return result;
 }
 
+// Funcion para calcular el proceso de trefilado semi taper con skim pass
 List<double> calculateSemiTaperSkinPass(
     double initialDiameter,
     double finishDiameter,
@@ -344,6 +351,7 @@ List<double> calculateSemiTaperSkinPass(
   return diameters;
 }
 
+// Calcula los valores de reducciones a partir de el valor inicial y el final de diametros
 double calculateReduction(double initial, double finalVal, int n) {
   if (initial * finalVal * n <= 0) {
     return 0.0;
@@ -351,6 +359,7 @@ double calculateReduction(double initial, double finalVal, int n) {
   return 100 - 100 * pow(finalVal, 2) / pow(initial, 2);
 }
 
+// Calcula los valores de reducciones a partir de los valores de los diametros calculados
 List<double> calculateReductions(List<double> diameters, int decimals) {
   List<double> reductions = List.filled(diameters.length, 0.0);
   for (int i = 1; i < diameters.length; i++) {
@@ -371,6 +380,7 @@ List<double> calculateReductions(List<double> diameters, int decimals) {
   return reductions.map((v) => double.parse(v.toStringAsFixed(decimals))).toList();
 }
 
+// Calcula las tensiones de cada paso dependiendo si el material es high carbon, low carbon, acero o custom
 double tensMat(double initialDiameter, double finishDiameter, double coefficient, int materialIndex) {
   double highCarbon() {
     if (finishDiameter == 0) return 0;
@@ -406,12 +416,14 @@ double tensMat(double initialDiameter, double finishDiameter, double coefficient
   }
 }
 
+// Funcion para calcular las tensiones cuando se especifica el primer y ultimo tensil
 double tensileMinMax(double initialDiameter, double middleDiameter, double finishDiameter, double minTensile, double maxTensile) {
   double reductionMiddle = calculateReduction(initialDiameter, middleDiameter, 1);
   double reductionFinish = calculateReduction(initialDiameter, finishDiameter, 1);
   return minTensile + reductionMiddle * ((maxTensile - minTensile) / reductionFinish);
 }
 
+// Funcion para calcular las tensiones
 List<int> calculateTensileStrength(int materialIndex, double carbon, List<double> diameters, double tmin, double tmax) {
   int dies = diameters.length - 1;
   List<double> tensileList;
@@ -425,6 +437,7 @@ List<int> calculateTensileStrength(int materialIndex, double carbon, List<double
   return tensileList.map((v) => v.round()).toList();
 }
 
+// Funcion para calcular los valores delta del proceso de trefilado
 List<double> calculateDelta(List<double> diameters, List<int> angles) {
   List<double> deltas = [];
   for (int i = 1; i < diameters.length; i++) {
@@ -446,6 +459,7 @@ List<double> calculateDelta(List<double> diameters, List<int> angles) {
   return deltas;
 }
 
+// Funcion para calcular temperaturas
 List<String> calculateTemperatures(int numDiameters, List<double> reductions, List<double> tensions) {
   List<int> temps = List.filled(numDiameters, 0);
   for (int i = 2; i < numDiameters; i++) {
@@ -459,6 +473,7 @@ List<String> calculateTemperatures(int numDiameters, List<double> reductions, Li
   return temps.map((t) => t.toString()).toList();
 }
 
+// Funcion para calcular angulos (16, 12, 9)
 List<int> calculateAngles(List<double> deltas, List<int> angles, int deltaLo, int deltaHi) {
   for (int i = 0; i < deltas.length; i++) {
     double d = deltas[i];
@@ -472,6 +487,7 @@ List<int> calculateAngles(List<double> deltas, List<int> angles, int deltaLo, in
   return angles;
 }
 
+// Funcion para seleccionar los dados mas adecuados al momento
 Future<Map<String, dynamic>> selectStandardDies(
     List<int> memoAngles, List<double> arrDieVals) async {
   // Inicializar listas de salida
@@ -538,6 +554,7 @@ int getDeltaHigh(int materialIndex) {
   }
 }
 
+// Funcion para obtener la velocidad de la produccion
 List<double> getSpeed(double finalSpeed, List<double> diameters) {
   if (finalSpeed == 0) {
     return List.filled(diameters.length, 0.0);
@@ -558,6 +575,7 @@ List<double> getSpeed(double finalSpeed, List<double> diameters) {
   return speed;
 }
 
+// Funcion para obtener el peso de produccion
 double getWeight(double finalSpeed, double finishDiameter) {
   if (finalSpeed == 0) {
     return 0.0;
@@ -566,18 +584,22 @@ double getWeight(double finalSpeed, double finishDiameter) {
   }
 }
 
+// Funcion para transformar de pulgadas a milimetros
 double inchesToMm(double value) {
   return value * 25.4;
 }
 
+// Funcion para transformar de milimetros a pulgadas
 double mmToInches(double value) {
   return value / 25.4;
 }
 
+// Funcion para transformar de mPa a Kpsi (Tensil)
 double mPaTOKpsi(double value) {
   return value * 0.145038;
 }
 
+// Funcion principal para realizar cada uno de los calculos dl proceso de trefilado
 Future<Map<String, dynamic>> performCalculations(Map<String, dynamic> state) async {
   // Detectar sistema de unidades
   String unitSystem = state["selectedSystem"] ?? "metric";
