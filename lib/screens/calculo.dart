@@ -785,7 +785,6 @@ Future<Map<String, dynamic>> performCalculations(Map<String, dynamic> state) asy
 
   List<double> deltas = calculateDelta(diameterValues, anglesList);
   
-  // CORREGIR: Usar spread operator en lugar de concatenación
   List<Map<String, dynamic>> angles = [
     {"value": 0},
     ...anglesList.map((v) => {"value": v})
