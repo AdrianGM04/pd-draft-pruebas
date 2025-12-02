@@ -2230,7 +2230,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Skin Pass", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            Text("Skim Pass", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                             DropdownButtonFormField<String>(
                               value: isSkinPass ? 'Yes' : 'No',
                               decoration: InputDecoration(
@@ -3865,7 +3865,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                     child: Wrap(
                                                       spacing: 10,
                                                       alignment: WrapAlignment.center,
-                                                      children: ['mt.ton/h', 'kg/h', 'lb/h', 'lb/min'].map((Ounit) {
+                                                      children: ['mton/h', 'kg/h', 'lb/h', 'lb/min'].map((Ounit) {
                                                         return ChoiceChip(
                                                           label: Text(Ounit),
                                                           selected: selectedOutputUnit == Ounit,

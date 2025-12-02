@@ -351,34 +351,48 @@ List<double> calculateSemiTaperSkinPass(
   return diameters;
 }
 
-// Calcula los valores de reducciones a partir de el valor inicial y el final de diametros
+// Calcula los valores de reducciones a partir del valor inicial y final de diámetros
 double calculateReduction(double initial, double finalVal, int n) {
   if (initial * finalVal * n <= 0) {
     return 0.0;
   }
-  return 100 - 100 * pow(finalVal, 2) / pow(initial, 2);
+  double result = 100 - (100 * pow(finalVal, 2) / pow(initial, 2));
+  return result;
 }
 
-// Calcula los valores de reducciones a partir de los valores de los diametros calculados
-List<double> calculateReductions(List<double> diameters, int decimals) {
+List<double> calculateReductions(List<double> diameters, int decimals, int decimalt) {
   List<double> reductions = List.filled(diameters.length, 0.0);
+  double trunc3(double v) => double.parse(v.toStringAsFixed(decimalt));
+
   for (int i = 1; i < diameters.length; i++) {
-    double initial = diameters[i - 1];
-    double finalVal = diameters[i];
+    // TRUNCAR DIÁMETROS EN CADA PASO
+    double initial = trunc3(diameters[i - 1]);
+    double finalVal = trunc3(diameters[i]);
     double reduction = calculateReduction(initial, finalVal, 1);
-    
+
     if (reduction < 1) {
       diameters[i - 1] = finalVal;
-      initial = diameters[i - 1];
-      finalVal = diameters[i];
+
+      initial = trunc3(diameters[i - 1]);
+      finalVal = trunc3(diameters[i]);
+
       reduction = calculateReduction(initial, finalVal, 1);
     }
-    
+
     reductions[i] = reduction;
+
   }
-  
-  return reductions.map((v) => double.parse(v.toStringAsFixed(decimals))).toList();
+
+  // Redondeo final
+  List<double> finalList = reductions
+      .map((v) => double.parse(v.toStringAsFixed(decimals)))
+      .toList();
+
+
+  return finalList;
 }
+
+
 
 // Calcula las tensiones de cada paso dependiendo si el material es high carbon, low carbon, acero o custom
 double tensMat(double initialDiameter, double finishDiameter, double coefficient, int materialIndex) {
@@ -618,6 +632,7 @@ Future<Map<String, dynamic>> performCalculations(Map<String, dynamic> state) asy
 
   // Leer variables ya convertidas
   int decimals = 4;
+  int decimalt = int.parse(state['decimals'].toString());
   double initialDiameter = double.parse(state['initialDiameter'].toString());
   double finishDiameter = double.parse(state['finishDiameter'].toString());
   int dies = int.parse(state['dies'].toString());
@@ -673,13 +688,17 @@ Future<Map<String, dynamic>> performCalculations(Map<String, dynamic> state) asy
       )..add(finishDiameter);
       
       // Calcular reducciones y tensiones para Full Taper
-      reductionValues = calculateReductions(diameterValues, 1);
+      if (unitSystem == "imperial") {
+        reductionValues = calculateReductions(diameterValues.map((d) => double.parse(mmToInches(d).toStringAsFixed(decimals))).toList(), 1, decimalt);
+      }else{
+        reductionValues = calculateReductions(diameterValues, 1, decimalt);
+      }
       tensileValues = calculateTensileStrength(materialIndex, carbon, diameterValues, tensileMin, tensileMax)
           .map((v) => v.toDouble()).toList();
     } else if (draftingType == "Optimized") {
       List<double> diametersTemp = diametersBase;
       List<int> tensileTemp = calculateTensileStrength(materialIndex, carbon, diametersTemp, tensileMin, tensileMax);
-      List<double> reductionsTemp = calculateReductions(diametersTemp, 1);
+      List<double> reductionsTemp = calculateReductions(diametersTemp, 1, decimalt);
       List<String> temperaturesTemp = calculateTemperatures(diametersTemp.length, reductionsTemp, tensileTemp.map((v) => v.toDouble()).toList());
       List<double> temperaturesTempDouble = temperaturesTemp.map((v) => double.parse(v)).toList();
 
@@ -700,7 +719,11 @@ Future<Map<String, dynamic>> performCalculations(Map<String, dynamic> state) asy
       );
       
       // Calcular reducciones y tensiones para Full Taper
-      reductionValues = calculateReductions(diameterValues, 1);
+      if (unitSystem == "imperial") {
+        reductionValues = calculateReductions(diameterValues.map((d) => double.parse(mmToInches(d).toStringAsFixed(decimals))).toList(), 1, decimalt);
+      }else{
+        reductionValues = calculateReductions(diameterValues, 1, decimalt);
+      }
       tensileValues = calculateTensileStrength(materialIndex, carbon, diameterValues, tensileMin, tensileMax)
           .map((v) => v.toDouble()).toList();
     }
@@ -712,7 +735,11 @@ Future<Map<String, dynamic>> performCalculations(Map<String, dynamic> state) asy
       );
       
       // Calcular reducciones y tensiones para Linear
-      reductionValues = calculateReductions(diameterValues, 1);
+      if (unitSystem == "imperial") {
+        reductionValues = calculateReductions(diameterValues.map((d) => double.parse(mmToInches(d).toStringAsFixed(decimals))).toList(), 1, decimalt);
+      }else{
+        reductionValues = calculateReductions(diameterValues, 1, decimalt);
+      }
       tensileValues = calculateTensileStrength(materialIndex, carbon, diameterValues, tensileMin, tensileMax)
           .map((v) => v.toDouble()).toList();
     }
@@ -723,7 +750,11 @@ Future<Map<String, dynamic>> performCalculations(Map<String, dynamic> state) asy
     )..add(finishDiameter);
     
     // Calcular reducciones y tensiones para Full Taper
-    reductionValues = calculateReductions(diameterValues, 1);
+    if (unitSystem == "imperial") {
+        reductionValues = calculateReductions(diameterValues.map((d) => double.parse(mmToInches(d).toStringAsFixed(4))).toList(), 1, decimalt);
+      }else{
+        reductionValues = calculateReductions(diameterValues, 1, decimalt);
+      }
     tensileValues = calculateTensileStrength(materialIndex, carbon, diameterValues, tensileMin, tensileMax)
         .map((v) => v.toDouble()).toList();
 
@@ -735,14 +766,18 @@ Future<Map<String, dynamic>> performCalculations(Map<String, dynamic> state) asy
       );
       
       // Calcular reducciones y tensiones para Full Taper
-      reductionValues = calculateReductions(diameterValues, 1);
+      if (unitSystem == "imperial") {
+        reductionValues = calculateReductions(diameterValues.map((d) => double.parse(mmToInches(d).toStringAsFixed(decimals))).toList(), 1, decimalt);
+      }else{
+        reductionValues = calculateReductions(diameterValues, 1, decimalt);
+      }
       tensileValues = calculateTensileStrength(materialIndex, carbon, diameterValues, tensileMin, tensileMax)
           .map((v) => v.toDouble()).toList();
     
     } else if (draftingType == 'Optimized' && dies > 1) {
       List<double> diametersTemp = diametersBase;
       List<int> tensileTemp = calculateTensileStrength(materialIndex, carbon, diametersTemp, tensileMin, tensileMax);
-      List<double> reductionsTemp = calculateReductions(diametersTemp, 1);
+      List<double> reductionsTemp = calculateReductions(diametersTemp, 1, decimalt);
       List<String> temperaturesTemp = calculateTemperatures(diametersTemp.length, reductionsTemp, tensileTemp.map((v) => v.toDouble()).toList());
       List<double> temperaturesTempDouble = temperaturesTemp.map((v) => double.parse(v)).toList();
 
@@ -759,7 +794,11 @@ Future<Map<String, dynamic>> performCalculations(Map<String, dynamic> state) asy
       diameterValues = diametersBase;
     
     // Calcular reducciones y tensiones para el caso por defecto
-    reductionValues = calculateReductions(diameterValues, 1);
+    if (unitSystem == "imperial") {
+        reductionValues = calculateReductions(diameterValues.map((d) => double.parse(mmToInches(d).toStringAsFixed(decimals))).toList(), 1, decimalt);
+      }else{
+        reductionValues = calculateReductions(diameterValues, 1, decimalt);
+      }
     tensileValues = calculateTensileStrength(materialIndex, carbon, diameterValues, tensileMin, tensileMax)
         .map((v) => v.toDouble()).toList();
   }
@@ -802,7 +841,11 @@ Future<Map<String, dynamic>> performCalculations(Map<String, dynamic> state) asy
     Map<String, dynamic> stockRes = await selectStandardDies(memoAngles, arrDieVals);
     diameterValues = [initialDiameter] + (stockRes["stock_diameters"] as List<double>);
     stock = [false] + (stockRes["stock_array"] as List<bool>);
-    reductionValues = calculateReductions(diameterValues, 1);
+    if (unitSystem == "imperial") {
+        reductionValues = calculateReductions(diameterValues.map((d) => double.parse(mmToInches(d).toStringAsFixed(decimals))).toList(), 1, decimalt);
+      }else{
+        reductionValues = calculateReductions(diameterValues, 1, decimalt);
+      }
     totalReduction = double.parse(calculateReduction(diameterValues[0], diameterValues.last, 1).toStringAsFixed(1));
     anglesList = List.filled(dies, 12);
     deltas = calculateDelta(diameterValues, anglesList);
@@ -862,7 +905,7 @@ Future<Map<String, dynamic>> performCalculations(Map<String, dynamic> state) asy
   double weight = getWeight(finalSpeedMs, finishDiameter);
   double tweight;
 
-  if (selectedOutputUnit == "ton/h") {
+  if (selectedOutputUnit == "mton/h") {
     tweight = weight / 1000;
   } else if (selectedOutputUnit == "lb/h") {
     tweight = weight * 2.20462;
