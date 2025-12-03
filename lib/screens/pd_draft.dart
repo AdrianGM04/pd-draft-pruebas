@@ -129,11 +129,11 @@ class _OtraPantallaState extends State<OtraPantalla> {
   final TextEditingController maxDeltaController = TextEditingController();
 
   int firstPressuredisplay = 10;
-  int middlePressuredisplay = 10;
+  int middlePressuredisplay = 8;
   int lastPressuredisplay = 8;
 
   int firstPressure = 10;
-  int middlePressure = 10;
+  int middlePressure = 8;
   int lastPressure = 8;
 
   double totalWeight = 0.0;
@@ -279,7 +279,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
   void _applyMetricDefaults() {
     setState(() {
       selectedSystem = 'metric'; // Cambia al sistema seleccionado, no al global
-      decimalsdisplay = 2;
+      decimalsdisplay = 3;
       limitController.text = "120";
       initialDiameterController.text = "5.5";
       finalDiameterController.text = "2";
@@ -2046,7 +2046,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Client Name", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            Text("Client Name", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             TextField(
                               controller: clientNameController,
                               style: TextStyle(fontSize: 15),
@@ -2057,7 +2057,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                               ),
                             ),
                             SizedBox(height: 16),
-                            Text("Product Name", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            Text("Product Name", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             TextField(
                               controller: productNameController,
                               style: TextStyle(fontSize: 15),
@@ -2079,7 +2079,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Date", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            Text("Date", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             TextField(
                               controller: dateController,
                               style: TextStyle(fontSize: 15),
@@ -2095,7 +2095,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                               onTap: () => _selectDate(),
                             ),
                             SizedBox(height: 2),
-                            Text("Technical Rep", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            Text("Technical Rep", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             TextField(
                               controller: advisorController,
                               style: TextStyle(fontSize: 15),
@@ -2117,7 +2117,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Description", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            Text("Description", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             TextField(
                               controller: descriptionController,
                               style: TextStyle(fontSize: 15),
@@ -2140,7 +2140,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Final Speed ($selectedSpeedUnit)", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            Text("Final Speed ($selectedSpeedUnit)", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             SizedBox(height: 4),
                             SizedBox(
                               width: double.infinity,
@@ -2157,7 +2157,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                               ),
                             ),
                             SizedBox(height: 4),
-                            Text("Output ($selectedOutputUnit)", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            Text("Output ($selectedOutputUnit)", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             SizedBox(height: 4),
                             SizedBox(
                               width: double.infinity,
@@ -2169,7 +2169,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                 ),
                                 child: Text(
                                   totalWeight.toStringAsFixed(decimalsdisplay),
-                                  style: TextStyle(fontSize: 15),
+                                  style: TextStyle(fontSize: 16),
                                 ),
                               ),
                             ),
@@ -2201,7 +2201,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                 Text("${item[0]} ${item[0].toString().contains('Diameter') ? (selectedSystem == 'metric' ? '(mm)' : '(in)') : ''}", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                                 TextField(
                                   controller: item[1] as TextEditingController,
-                                  style: TextStyle(fontSize: 15),
+                                  style: TextStyle(fontSize: 16),
                                   keyboardType: TextInputType.number,
                                   decoration: InputDecoration(
                                     border: OutlineInputBorder(),
@@ -2230,7 +2230,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Skim Pass", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            Text("Skim Pass", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             DropdownButtonFormField<String>(
                               value: isSkinPass ? 'Yes' : 'No',
                               decoration: InputDecoration(
@@ -2262,7 +2262,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text("Reduction (%)", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                              Text("Reduction (%)", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                               TextField(
                                 controller: skinPassReductionController,
                                 style: TextStyle(fontSize: 15),
@@ -2295,7 +2295,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Material", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            Text("Material", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             DropdownButtonFormField<String>(
                               value: selectedMaterial,
                               decoration: InputDecoration(
@@ -2321,7 +2321,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text("First Tensile", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                              Text("First Tensile", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                               TextField(
                                 controller: minTensileController,
                                 style: TextStyle(fontSize: 15),
@@ -2348,7 +2348,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text("Last Tensile", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                              Text("Last Tensile", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                               TextField(
                                 controller: maxTensileController,
                                 style: TextStyle(fontSize: 15),
@@ -2379,7 +2379,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Carbon (%)", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            Text("Carbon (%)", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             DropdownButtonFormField<String>(
                               value: filteredCarbonOptions.contains(selectedCarbon) ? selectedCarbon : null,
                               decoration: InputDecoration(
@@ -2405,7 +2405,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Decimals", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            Text("Decimals", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             TextField(
                               controller: decimalsController,
                               style: TextStyle(fontSize: 15),
@@ -2442,7 +2442,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Data Table", style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text("Data Table", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                         SizedBox(height: 8),
                         Expanded(
                           child: ListView.builder(
@@ -2969,7 +2969,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                   padding: EdgeInsets.symmetric(horizontal: 2, vertical: 2),
                                                   child: Text(
                                                     header,
-                                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                                                     textAlign: TextAlign.center,
                                                   ),
                                                 ),
@@ -2986,7 +2986,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                   if (cellIndex == 0) {           
                                                     return Text(                        
                                                       index == 0 ? "Incoming" : "$index",
-                                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                                                       textAlign: TextAlign.center,
                                                     );
                                                   }
@@ -3009,7 +3009,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                                   : '',
                                                             ),
                                                             keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                                                             textAlign: TextAlign.center,
                                                             onSubmitted: (value) {
                                                               final parsed = double.tryParse(value);
@@ -3113,7 +3113,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                                     }
                                                                   })()
                                                                 : "-",
-                                                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                                                             textAlign: TextAlign.center,
                                                           ),
                                                         ),
@@ -3134,7 +3134,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                       index < reductions.length && reductions[index] > 0
                                                           ? "${reductions[index].toStringAsFixed(1)}%"
                                                           : "-",
-                                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                                                       textAlign: TextAlign.center,
                                                     ),
                                                   );
@@ -3199,7 +3199,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                         (deltaValue != null && deltaValue > 0)
                                                             ? "${deltaValue.toStringAsFixed(2)}"
                                                             : "-",
-                                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                                                         textAlign: TextAlign.center,
                                                       ),
                                                     );
@@ -3215,7 +3215,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                         index < angles.length && angles[index] > 0
                                                             ? "${angles[index].toStringAsFixed(0)}"
                                                             : "-",
-                                                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                                                         textAlign: TextAlign.center,
                                                       ),
                                                     );
@@ -3291,7 +3291,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                               index < angles.length && angles[index] > 0
                                                                   ? "${angles[index].toStringAsFixed(0)}"
                                                                   : "-",
-                                                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                                                               textAlign: TextAlign.center,
                                                             ),
                                                           ),
@@ -3313,7 +3313,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                         index < tensiles.length && tensiles[index] > 0
                                                           ? tensiles[index].toStringAsFixed(0)
                                                           : "-",
-                                                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                                                         textAlign: TextAlign.center,
                                                       ),
                                                     );
@@ -3333,7 +3333,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                         index < temperatures.length && temperatures[index] > 0
                                                           ? temperatures[index].toStringAsFixed(0)
                                                           : "-",
-                                                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                                                         textAlign: TextAlign.center,
                                                       ),
                                                     );
@@ -3344,7 +3344,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                     index < speeds.length && speeds[index] > 0
                                                         ? speeds[index].toStringAsFixed(1)
                                                         : "-",
-                                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                                                     textAlign: TextAlign.center,
                                                   );
                                                 })(),
@@ -3371,7 +3371,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                       index < pressureDieValues.length
                                                           ? pressureDieValues[index] + "%"
                                                           : "-",
-                                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                                                     ),
 
                                                     // Resultado del cálculo
@@ -3389,7 +3389,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                         final result = previousDiameter * (1 + pressureValue / 100);
                                                         return result.toStringAsFixed(decimalsdisplay);
                                                       })(),
-                                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                                                     ),
                                                   ],
                                                 ),
@@ -3424,7 +3424,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                         : chartType == 1
                                                             ? "Delta"
                                                             : "Reduction (%)",
-                                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                                                   textAlign: TextAlign.center,
                                                 ),
                                               ),
@@ -3865,7 +3865,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                     child: Wrap(
                                                       spacing: 10,
                                                       alignment: WrapAlignment.center,
-                                                      children: ['mton/h', 'kg/h', 'lb/h', 'lb/min'].map((Ounit) {
+                                                      children: ['m-ton/h', 'kg/h', 'lb/h', 'us-ton/h', 'lb/min'].map((Ounit) {
                                                         return ChoiceChip(
                                                           label: Text(Ounit),
                                                           selected: selectedOutputUnit == Ounit,

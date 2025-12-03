@@ -905,10 +905,12 @@ Future<Map<String, dynamic>> performCalculations(Map<String, dynamic> state) asy
   double weight = getWeight(finalSpeedMs, finishDiameter);
   double tweight;
 
-  if (selectedOutputUnit == "mton/h") {
+  if (selectedOutputUnit == "m-ton/h") {
     tweight = weight / 1000;
   } else if (selectedOutputUnit == "lb/h") {
     tweight = weight * 2.20462;
+  } else if (selectedOutputUnit == "us-ton/h") {
+    tweight = weight * 2.20462 / 2000;
   } else if (selectedOutputUnit == "lb/min") {
     tweight = (weight * 2.20462) / 60;
   } else {
