@@ -755,7 +755,6 @@ bool _pnMatchesSelected(String pnRaw) {
     alturaInicial2  = alturaInicial;
     blMinPercent2   = blMinPercent;
     blMaxPercent2   = blMaxPercent;
-    
 
     // ⚑ Fuerza 16° para el segundo dado desde el inicio
     reductionAngle2 = 16.0;
@@ -1128,7 +1127,6 @@ Widget _copyCheckbox() {
   );
 }
 
-
 // Ajusta la altura izquierda (naranjaL2) para mantener ±30° externos
 void _updateReductionAngleRight(double angleDeg) {
   if (angleDeg <= 0 || angleDeg >= 89) return;
@@ -1286,7 +1284,7 @@ Future<void> _openSettings() async {
                             child: const Text('Cancel'),
                           ),
                           // Apply
-                          OutlinedButton(
+                          ElevatedButton(
                             onPressed: () {
                               setState(() {
                                 _showInches = tempShowInches;
@@ -2166,26 +2164,14 @@ List<Widget> _row3Fields({required bool right}) => [
 double kPanelWidth = 560;
 
 Widget _sidePanel({required bool right}) {
-  
   final bool enabledRight = right ? !_copyLeftToRight : true;
-
-  // Función segura para obtener color
-  Color safeDeltaFill(bool rightSide) {
-    try {
-      return rightSide
-          ? (_deltaFillRight() ?? Colors.white)
-          : (_deltaFillLeft ?? Colors.white);
-    } catch (_) {
-      return Colors.white;
-    }
-  }
 
   return SizedBox(
     width: kPanelWidth,
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // FILA 1: Settings (solo izquierda) + campos principales
+        // FILA 1: Settings (solo izq) + campos principales
         Stack(
           children: [
             Center(
@@ -2194,24 +2180,21 @@ Widget _sidePanel({required bool right}) {
                 spacing: kWrapSpacing,
                 runSpacing: 8,
                 children: [
-                  // Checkbox + Entry en fila
-                  right
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(top: 20),
-                              child: _copyCheckbox(),
-                            ),
-                            const SizedBox(width: 10),
-                            buildInputDiameterFieldForRight(
-                                enabled: enabledRight),
-                          ],
-                        )
-                      : buildInputDiameterField(),
-
-                  // Finished Diameter
+                // ⬅️ Agrupamos checkbox + Entry en una fila y bajamos el checkbox con padding
+                right
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 20), // ↓ muévelo más/menos con este valor
+                            child: _copyCheckbox(),
+                          ),
+                          const SizedBox(width: 10),
+                          buildInputDiameterFieldForRight(enabled: enabledRight),
+                        ],
+                      )
+                    : buildInputDiameterField(),
                   right
                       ? buildCompactField(
                           "Finished Diameter (${_unit()})",
@@ -2222,24 +2205,27 @@ Widget _sidePanel({required bool right}) {
                       : buildCompactField(
                           "Finished Diameter (${_unit()})",
                           barraLengthController,
-                          (_) {},
+                          (_){},
                           isError: (!_customDie && _fdOutOfRange),
                         ),
 
-                  // Reduction Angle
-                  _buildReductionAngleInputFor(
-                      die: right ? _secondDieType : _selectedDieType,
-                      right: right,
-                      enabled: enabledRight),
+                  right
+                      ? _buildReductionAngleInputFor(
+                          die: _secondDieType,
+                          right: true,
+                          enabled: enabledRight,
+                        )
+                      : _buildReductionAngleInputFor(
+                          die: _selectedDieType,
+                          right: false,
+                        ),
                 ],
               ),
             ),
 
-            // Icon Settings solo izquierda
             if (!right)
               Positioned(
-                left: 0,
-                top: 6,
+                left: 0, top: 6,
                 child: IconButton(
                   tooltip: 'Settings',
                   icon: const Icon(Icons.settings),
@@ -2260,29 +2246,23 @@ Widget _sidePanel({required bool right}) {
             spacing: kWrapSpacing,
             runSpacing: 8,
             children: [
-              buildCompactField(
-                "Min Bearing Length (%)",
-                right ? blMinController2 : blMinController,
-                (_) {},
-                enabled: enabledRight,
-              ),
-              buildCompactField(
-                "Max Bearing Length (%)",
-                right ? blMaxController2 : blMaxController,
-                (_) {},
-                enabled: enabledRight,
-              ),
-              buildReadOnlyField(
-                "Reduction Area (%)",
-                right ? reductionAreaController2 : reductionAreaController,
-                width: 120,
-              ),
+              right
+                  ? buildCompactField("Min Bearing Length (%)", blMinController2, (_){}, enabled: enabledRight)
+                  : buildCompactField("Min Bearing Length (%)", blMinController, (_){ }),
+
+              right
+                  ? buildCompactField("Max Bearing Length (%)", blMaxController2, (_){}, enabled: enabledRight)
+                  : buildCompactField("Max Bearing Length (%)", blMaxController, (_){ }),
+
+              right
+                  ? buildReadOnlyField("Reduction Area (%)", reductionAreaController2, width: 120)
+                  : buildReadOnlyField("Reduction Area (%)", reductionAreaController,  width: 120),
             ],
           ),
         ),
         const SizedBox(height: 8),
 
-        // FILA 3: Δ Factor + Grade
+        // FILA 3: Δ factor + Grade (en ambos)
         Center(
           child: Wrap(
             alignment: WrapAlignment.center,
@@ -2295,26 +2275,23 @@ Widget _sidePanel({required bool right}) {
                   "Δ Factor",
                   right ? deltaController2 : deltaController,
                   width: 96,
-                  fill: safeDeltaFill(right),
+                  fill: right ? _deltaFillRight() : _deltaFillLeft, // ← condicional
                 ),
               ),
-              // Grade dropdown seguro para Wrap
-              SizedBox(
-                width: right ? 96 : 120,
-                child: right
-                    ? buildGradeDropdownRight(enabled: enabledRight)
-                    : buildGradeDropdown(),
-              ),
+              if (right)
+                buildGradeDropdownRight(enabled: enabledRight)
+              else
+                Expanded(child: buildGradeDropdown()),
             ],
           ),
         ),
         const SizedBox(height: 8),
 
-        // Botón Build Die
+        // Build Die
         Center(
-          child: OutlinedButton(
+          child: ElevatedButton(
             onPressed: right
-                ? (_copyLeftToRight ? null : _buildDieRight)
+                ? (_copyLeftToRight ? null : _buildDieRight) // bloquea si está copiando
                 : ((_usePart && !_partFound) ? null : _buildDie),
             child: const Text('Build Die'),
           ),
@@ -2323,7 +2300,6 @@ Widget _sidePanel({required bool right}) {
     ),
   );
 }
-
 
 // --- Escribe de nuevo los TextFields en la unidad actual ---
 void _refreshControllers() {
@@ -2699,56 +2675,53 @@ Widget _buildControls() {
       // CUERPO DE FORMULARIOS
       if (_compare)
         Center(
-          child: ColoredBox(
-            color: Colors.transparent,
-            child: SizedBox(
-              // ancho total para poder separar las dos columnas
-              width: kPanelWidth * 2 + kCompareMiddleGap,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // COLUMNA IZQUIERDA
-                  Transform.translate(
-                    offset: const Offset(kLeftNudge, 0),
-                    child: SizedBox(
-                      width: kPanelWidth,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Align(
-                            alignment: Alignment.center,
-                            child: _buildDieTypeSelector(),
-                          ),
-                          const SizedBox(height: 12),
-                          _sidePanel(right: false),
-                        ],
-                      ),
+          child: SizedBox(
+            // ancho total para poder separar las dos columnas
+            width: kPanelWidth * 2 + kCompareMiddleGap,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // COLUMNA IZQUIERDA
+                Transform.translate(
+                  offset: const Offset(kLeftNudge, 0),
+                  child: SizedBox(
+                    width: kPanelWidth,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Align(
+                          alignment: Alignment.center,
+                          child: _buildDieTypeSelector(),
+                        ),
+                        const SizedBox(height: 12),
+                        _sidePanel(right: false),
+                      ],
                     ),
                   ),
+                ),
 
-                  // COLUMNA DERECHA
-                  Transform.translate(
-                    offset: const Offset(kRightNudge, 0),
-                    child: SizedBox(
-                      width: kPanelWidth,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Align(
-                            alignment: Alignment.center,
-                            child: _buildSecondDieTypeSelector(),
-                          ),
-                          const SizedBox(height: 12),
-                          _sidePanel(right: true),
-                        ],
-                      ),
+                // COLUMNA DERECHA
+                Transform.translate(
+                  offset: const Offset(kRightNudge, 0),
+                  child: SizedBox(
+                    width: kPanelWidth,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Align(
+                          alignment: Alignment.center,
+                          child: _buildSecondDieTypeSelector(),
+                        ),
+                        const SizedBox(height: 12),
+                        _sidePanel(right: true),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          )
+          ),
         )
       else
         // Layout original de una sola columna
@@ -2798,15 +2771,15 @@ Widget _buildControls() {
         runSpacing: 8,
         children: [
           if (!_compare)
-            OutlinedButton(
+            ElevatedButton(
               onPressed: (_usePart && !_partFound) ? null : _buildDie,
               child: const Text('Build Die'),
             ),
-          OutlinedButton(
+          ElevatedButton(
             onPressed: () => setState(() => _showConstruction = !_showConstruction),
             child: Text(_showConstruction ? 'Hide Construction' : 'Show Construction'),
           ),
-          OutlinedButton(
+          ElevatedButton(
             onPressed: () => setState(() => _compare = !_compare),
             child: Text(_compare ? 'Hide Comparison' : 'Compare Die'),
           ),
@@ -4872,55 +4845,14 @@ Offset _ptTop(double x) => Offset(x, mReduceSup * x + bReduceSup);
 // Muestra rieles solo si estás en modo construcción Y el grade no es None
 final bool _showRails = showDeltaRails && grade != 'None';
 
-
-
-// --- Δ-rails (marcas verdes) ---==============================================
-// Muestra SOLO si el material no es "None"
-final bool _showGreen = grade != 'None';
-// --- Δ-rails (marcas verdes) ---
-if (_showGreen) {
-  final Paint railPaint = Paint()
-    ..color = const Color(0xFF22C55E)
-    ..strokeWidth = 6
-    ..strokeCap = StrokeCap.round;
-
-  // Línea verde (top + bottom)
-  canvas.drawLine(_ptTop(rxMin), _ptTop(rxMax), railPaint);
-
-  // ===== AÑADIR DESDE AQUÍ (amarillas) =====
-  // Seguridad por si hubiera rango degenerado
-  final double den = (deltaMax - deltaMin);
-  if (den > 1e-9) {
-    final double pxPerDelta = (rxMax - rxMin) / den;
-
-    // Longitudes en píxeles según 0.2 * min y 0.2 * max
-    final double leftLenPx  = 0.2 * deltaMin * pxPerDelta;
-    final double rightLenPx = 0.2 * deltaMax * pxPerDelta;
-
-    final Paint yellow = Paint()
-      ..color = const Color(0xFFFACC15) // amarillo
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round;
-
-    // Amarilla izquierda: [rxMin - leftLenPx, rxMin]
-    final double xL0 = rxMin - leftLenPx;
-    canvas.drawLine(_ptTop(xL0), _ptTop(rxMin), yellow);
-
-    // Amarilla derecha: [rxMax, rxMax + rightLenPx]
-    final double xR1 = rxMax + rightLenPx;
-    canvas.drawLine(_ptTop(rxMax), _ptTop(xR1), yellow);
-  }
-  // ===== FIN AMARILLAS =====
-}
-// ====== FIN Δ-rails ======
-
 // ═════════════ Δ-rails SUPERIORES (verticales a 90° respecto a la app) ═════════════
 if (grade != 'None') {
   // Punto sobre la rampa superior en X
   Offset _ptSup(double x) => Offset(x, mReduceSup * x + bReduceSup);
 
   // Dibuja una banda vertical de altura fija entre x0..x1 (hacia -Y)
-  void drawVerticalBand(Canvas canvas, double x0, double x1, double height, Color color) {
+  void drawVerticalBand(
+      Canvas canvas, double x0, double x1, double height, Color color) {
     if (x1 <= x0) return;
     final y0 = _ptSup(x0).dy;
     final y1 = _ptSup(x1).dy;
@@ -4940,50 +4872,86 @@ if (grade != 'None') {
     canvas.drawPath(band, paint);
   }
 
-  // ── Anclajes
-  final double xAstartTop = tRampUp.dx;   // inicio real de A (arriba)
-  final double xCtop      = cafeRight.dx; // inicio de C (arriba)
+  // ── Anclajes geométricos sobre la rampa
+  final double xAstartTop = tRampUp.dx;   // inicio de A (arriba)
+  final double xCtop      = cafeLeft.dx;  // línea B/C (inicio de C en el cono)
 
-  // ── Parámetros
-  const double kFrac       = 0.20; // 20%
-  const double kSnapPxX    = 0.6;  // pequeño ajuste en X para continuidad
-  const double kTrimPxLeft = 12.0; // recorte visual amarillo izquierdo en X
-
-  // Alturas (ajústalas a gusto)
+  // Alturas de las bandas
   const double kHGreen  = 24.0;
   const double kHYellow = 24.0;
   const double kHRed    = 24.0;
 
-  // ── Tramos amarillos (en X)
-  final double xYL1 = rxMin; // termina pegado al verde
-  final double xYL0 = (rxMin - kFrac * (rxMin - xAstartTop)) + kTrimPxLeft;
+  // ─────────────────────────────
+  // 1) Límites numéricos de Δ
+  //    usando tu regla de ±20 %
+  //    verde    : [deltaMin, deltaMax]
+  //    amarillo : [deltaMin*0.8, deltaMin)  y  (deltaMax, deltaMax*1.2]
+  //    rojo     : <deltaMin*0.8  y  >deltaMax*1.2
+  // ─────────────────────────────
+  final double dGreenMin   = deltaMin;
+  final double dGreenMax   = deltaMax;
+  final double dYellowLow  = deltaMin * 0.8; // límite rojo↔amarillo izq
+  final double dYellowHigh = deltaMax * 1.2; // límite amarillo↔rojo der
 
-  final double xYR0 = rxMax; // empieza pegado al verde
-  final double xYR1 = rxMax + kFrac * (xCtop - rxMax);
+  // Seguridad para que no haya valores raros
+  final double d0 = dYellowLow.clamp(0.01, 99.0);
+  final double d1 = dGreenMin.clamp(d0 + 1e-6, 99.0);
+  final double d2 = dGreenMax.clamp(d1 + 1e-6, 99.0);
+  final double d3 = dYellowHigh.clamp(d2 + 1e-6, 120.0);
 
-  // ── Ajustes para rojas
-  const double kStopPadPx = 1.2;           // no invadir C
-  final double xLeftRedEnd   = rxMin - kSnapPxX;
-  final double xRightRedBeg  = xYR1 + kSnapPxX;
-  final double xCedge        = xCtop - kStopPadPx;
+  // Convierte Δ → diámetro de entrada que produciría ese Δ
+  double _entryDiaFromDeltaLocal(double d) =>
+      _entryDiaFromDelta(d); // usamos tu helper original
+
+  // Diámetros correspondientes a cada frontera
+  final double din0 = _entryDiaFromDeltaLocal(d0); // rojo/amarillo izq
+  final double din1 = _entryDiaFromDeltaLocal(d1); // amarillo/verde izq
+  final double din2 = _entryDiaFromDeltaLocal(d2); // verde/amarillo der
+  final double din3 = _entryDiaFromDeltaLocal(d3); // amarillo/rojo der
+
+  // Función auxiliar para quedar dentro [xAstartTop, xCtop]
+  double _clampX(double x) =>
+      x.clamp(xAstartTop, xCtop);
+
+  // Mapea diámetro → posición X sobre la rampa actual
+  double _xForDia(double diaMm) =>
+      _clampX(_xForDiameter(diaMm, xAstartTop, xCtop));
+
+  // X de cada frontera de color
+  final double x0 = xAstartTop;           // inicio total
+  final double x1 = _xForDia(din0);       // fin rojo izq / inicio amarillo izq
+  final double x2 = _xForDia(din1);       // fin amarillo izq / inicio verde
+  final double x3 = _xForDia(din2);       // fin verde / inicio amarillo der
+  final double x4 = _xForDia(din3);       // fin amarillo der / inicio rojo der
+  final double x5 = xCtop;                // fin total (en B/C)
 
   canvas.save();
   canvas.clipPath(pathFondo);
 
-  // Verde (banda vertical a 90° respecto a la app)
-  drawVerticalBand(canvas, rxMin, rxMax, kHGreen, const Color(0xFF22C55E));
-
-  // Rojas (primero, para que amarillas queden encima)
-  if (xLeftRedEnd - xAstartTop > 0.5) {
-    drawVerticalBand(canvas, xAstartTop, xLeftRedEnd, kHRed, const Color(0xFFE51937)); // A → rxMin
-  }
-  if (xCedge - xRightRedBeg > 0.25) {
-    drawVerticalBand(canvas, xRightRedBeg, xCedge, kHRed, const Color(0xFFE51937));    // fin amarillo → C
+  // ------- Rojo izquierdo -------
+  if (x1 - x0 > 0.5) {
+    drawVerticalBand(canvas, x0, x1, kHRed, const Color(0xFFE51937));
   }
 
-  // Amarillas (encima del rojo)
-  drawVerticalBand(canvas, xYL0, xYL1, kHYellow, const Color(0xFFFACC15)); // izquierda
-  drawVerticalBand(canvas, xYR0, xYR1, kHYellow, const Color(0xFFFACC15)); // derecha
+  // ------- Amarillo izquierdo -------
+  if (x2 - x1 > 0.5) {
+    drawVerticalBand(canvas, x1, x2, kHYellow, const Color(0xFFFACC15));
+  }
+
+  // ------- Verde (zona buena) -------
+  if (x3 - x2 > 0.5) {
+    drawVerticalBand(canvas, x2, x3, kHGreen, const Color(0xFF22C55E));
+  }
+
+  // ------- Amarillo derecho -------
+  if (x4 - x3 > 0.5) {
+    drawVerticalBand(canvas, x3, x4, kHYellow, const Color(0xFFFACC15));
+  }
+
+  // ------- Rojo derecho -------
+  if (x5 - x4 > 0.5) {
+    drawVerticalBand(canvas, x4, x5, kHRed, const Color(0xFFE51937));
+  }
 
   canvas.restore();
 }
@@ -5503,7 +5471,6 @@ final Paint eraseBack = Paint()
   ..isAntiAlias = true;
 
 canvas.drawLine(cafeRight, p9, eraseBack);
-
 }
 
 // ═══ Repinta de nuevo el corredor blanco (sin tocar el inserto) ═══

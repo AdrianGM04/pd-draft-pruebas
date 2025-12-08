@@ -2040,61 +2040,13 @@ class _OtraPantallaState extends State<OtraPantalla> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Client + Product
+
+                      // Technical Rep
                       Expanded(
-                        flex: 2,
+                        flex: 1,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Client Name", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            TextField(
-                              controller: clientNameController,
-                              style: TextStyle(fontSize: 15),
-                              decoration: InputDecoration(
-                                border: OutlineInputBorder(),
-                                isDense: true,
-                                contentPadding: EdgeInsets.all(8),
-                              ),
-                            ),
-                            SizedBox(height: 16),
-                            Text("Product Name", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            TextField(
-                              controller: productNameController,
-                              style: TextStyle(fontSize: 15),
-                              decoration: InputDecoration(
-                                border: OutlineInputBorder(),
-                                isDense: true,
-                                contentPadding: EdgeInsets.all(8),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      SizedBox(width: 6),
-
-                      // Date + Technical Rep
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("Date", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            TextField(
-                              controller: dateController,
-                              style: TextStyle(fontSize: 15),
-                              decoration: InputDecoration(
-                                filled: true,
-                                prefixIcon: const Icon(Icons.calendar_today, size: 14),
-                                isDense: true,
-                                contentPadding: EdgeInsets.all(6),
-                                enabledBorder: OutlineInputBorder(borderSide: BorderSide.none),
-                                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.red)),
-                              ),
-                              readOnly: true,
-                              onTap: () => _selectDate(),
-                            ),
-                            SizedBox(height: 2),
                             Text("Technical Rep", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             TextField(
                               controller: advisorController,
@@ -2111,17 +2063,49 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
                       SizedBox(width: 6),
 
-                      // Description
+                      // Date
                       Expanded(
-                        flex: 3,
+                        flex: 1,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Description", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            Text("Date", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+
+                            SizedBox(
+                              height: 28, 
+                              child: TextField(
+                                controller: dateController,
+                                style: TextStyle(fontSize: 15),
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  prefixIcon: Icon(Icons.calendar_today, size: 14),
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+                                  enabledBorder: OutlineInputBorder(borderSide: BorderSide.none),
+                                  focusedBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(color: Colors.red)),
+                                ),
+                                readOnly: true,
+                                onTap: () => _selectDate(),
+                              ),
+                            ),
+
+                          ],
+                        ),
+                      ),
+
+                      SizedBox(width: 6),
+
+                      // Product Name
+                      Expanded(
+                        flex: 1,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Product Name", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             TextField(
-                              controller: descriptionController,
+                              controller: productNameController,
                               style: TextStyle(fontSize: 15),
-                              maxLines: 4,
                               decoration: InputDecoration(
                                 border: OutlineInputBorder(),
                                 isDense: true,
@@ -2134,56 +2118,124 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
                       SizedBox(width: 6),
 
-                      // Final Speed + Output
+                      // Client Name
                       Expanded(
                         flex: 1,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Final Speed ($selectedSpeedUnit)", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            SizedBox(height: 4),
-                            SizedBox(
-                              width: double.infinity,
-                              child: TextField(
-                                controller: finalSpeedController,
-                                style: TextStyle(fontSize: 15),
-                                keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                ),
-                                onChanged: (_) => updateSpeed(),
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text("Output ($selectedOutputUnit)", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            SizedBox(height: 4),
-                            SizedBox(
-                              width: double.infinity,
-                              child: Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Color(0xFFe51937)),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  totalWeight.toStringAsFixed(decimalsdisplay),
-                                  style: TextStyle(fontSize: 16),
-                                ),
+                            Text("Client Name", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            TextField(
+                              controller: clientNameController,
+                              style: TextStyle(fontSize: 15),
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(),
+                                isDense: true,
+                                contentPadding: EdgeInsets.all(8),
                               ),
                             ),
                           ],
                         ),
                       ),
+
+                      SizedBox(width: 6),
+
+                      // Description
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Description", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            
+                            TextField(
+                              controller: descriptionController,
+                              style: TextStyle(fontSize: 15),
+                              minLines: 1,       
+                              maxLines: 5,       
+                              keyboardType: TextInputType.multiline,
+                              textInputAction: TextInputAction.newline,
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(),
+                                isDense: true,
+                                contentPadding: EdgeInsets.all(8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      SizedBox(width: 6),
+                    
+                      
+
+                      // Final Speed + Output
+                      Expanded(
+                        flex: 1,
+                        child: Row(
+                          children: [
+                            // Final Speed
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("Final Speed ($selectedSpeedUnit)", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  
+                                  TextField(
+                                    controller: finalSpeedController,
+                                    style: TextStyle(fontSize: 15),
+                                    keyboardType: TextInputType.number,
+                                    decoration: InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                    ),
+                                    onChanged: (_) => updateSpeed(),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            SizedBox(width: 12),
+
+                            // Output
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                            
+                                  Text("Output ($selectedOutputUnit)", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  
+                                  Container(
+                                    width: double.infinity,
+                                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Color(0xFFe51937)),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      totalWeight.toStringAsFixed(decimalsdisplay),
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                     ],
                   ),
 
-                  SizedBox(height: 4),
+                  SizedBox(height: 10),
 
                   // ===================== ROW 2 =====================
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Wrap(
+                    alignment: WrapAlignment.center,  
+                    crossAxisAlignment: WrapCrossAlignment.start,
+                    spacing: 12, 
+                    runSpacing: 6, 
                     children: [
                       // Initial, Final, # of Dies
                       for (var item in [
@@ -2191,42 +2243,42 @@ class _OtraPantallaState extends State<OtraPantalla> {
                         ["Final Diameter", finalDiameterController, () => validateDiameters()],
                         ["# of Dies", diesController, () => updateDiesCount()],
                       ])
-                        Expanded(
-                          flex: 1,
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text("${item[0]} ${item[0].toString().contains('Diameter') ? (selectedSystem == 'metric' ? '(mm)' : '(in)') : ''}", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                                TextField(
-                                  controller: item[1] as TextEditingController,
-                                  style: TextStyle(fontSize: 16),
-                                  keyboardType: TextInputType.number,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(),
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.all(8),
-                                  ),
-                                  onChanged: (_) {
-                                    setState(() {
-                                      isManual = false;
-                                      isManualAngle = false;
-                                      semiActive = false;
-                                      diametersModified = List.filled(manualDiameters.length, false);
-                                      anglesModified = List.filled(manualAngles.length, false);
-                                    });
-                                    (item[2] as Function)();
-                                  },
+                        SizedBox(
+                          width: 150,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "${item[0]} ${item[0].toString().contains('Diameter') ? (selectedSystem == 'metric' ? '(mm)' : '(in)') : ''}",
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                              ),
+                              TextField(
+                                controller: item[1] as TextEditingController,
+                                style: TextStyle(fontSize: 16),
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.all(8),
                                 ),
-                              ],
-                            ),
+                                onChanged: (_) {
+                                  setState(() {
+                                    isManual = false;
+                                    isManualAngle = false;
+                                    semiActive = false;
+                                    diametersModified = List.filled(manualDiameters.length, false);
+                                    anglesModified = List.filled(manualAngles.length, false);
+                                  });
+                                  (item[2] as Function)();
+                                },
+                              ),
+                            ],
                           ),
                         ),
 
                       // Skin Pass
-                      Expanded(
-                        flex: 1,
+                      SizedBox(
+                        width: 150,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -2238,7 +2290,9 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                 isDense: true,
                                 contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                               ),
-                              items: ['Yes', 'No'].map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyle(fontSize: 15)))).toList(),
+                              items: ['Yes', 'No']
+                                  .map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyle(fontSize: 15))))
+                                  .toList(),
                               onChanged: (value) {
                                 setState(() {
                                   isSkinPass = value == 'Yes';
@@ -2254,11 +2308,9 @@ class _OtraPantallaState extends State<OtraPantalla> {
                         ),
                       ),
 
-                      SizedBox(width: 6),
-
                       if (isSkinPass)
-                        Expanded(
-                          flex: 1,
+                        SizedBox(
+                          width: 150,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -2287,11 +2339,9 @@ class _OtraPantallaState extends State<OtraPantalla> {
                           ),
                         ),
 
-                      SizedBox(width: 6),
-
                       // Material
-                      Expanded(
-                        flex: 2,
+                      SizedBox(
+                        width: 300,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -2308,16 +2358,18 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                 actualizarCarbonOptions();
                                 enviarDatosAlBackend();
                               },
-                              items: materialOptions.map((m) => DropdownMenuItem(value: m, child: Text(m, style: TextStyle(fontSize: 15)))).toList(),
+                              items: materialOptions
+                                  .map((m) => DropdownMenuItem(value: m, child: Text(m, style: TextStyle(fontSize: 15))))
+                                  .toList(),
                             ),
                           ],
                         ),
                       ),
 
                       if (materialOptions.indexOf(selectedMaterial) == 7) ...[
-                        SizedBox(width: 6),
+                        // First Tensile
                         SizedBox(
-                          width: 90,
+                          width: 150,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -2342,9 +2394,10 @@ class _OtraPantallaState extends State<OtraPantalla> {
                             ],
                           ),
                         ),
-                        SizedBox(width: 6),
+
+                        // Last Tensile
                         SizedBox(
-                          width: 90,
+                          width: 150,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -2371,11 +2424,9 @@ class _OtraPantallaState extends State<OtraPantalla> {
                         ),
                       ],
 
-                      SizedBox(width: 6),
-
                       // Carbon
-                      Expanded(
-                        flex: 1,
+                      SizedBox(
+                        width: 150,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -2391,17 +2442,17 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                 setState(() => selectedCarbon = value!);
                                 enviarDatosAlBackend();
                               },
-                              items: filteredCarbonOptions.map((c) => DropdownMenuItem(value: c, child: Text(c, style: TextStyle(fontSize: 15)))).toList(),
+                              items: filteredCarbonOptions
+                                  .map((c) => DropdownMenuItem(value: c, child: Text(c, style: TextStyle(fontSize: 15))))
+                                  .toList(),
                             ),
                           ],
                         ),
                       ),
 
-                      SizedBox(width: 6),
-
                       // Decimals
-                      Expanded(
-                        flex: 1,
+                      SizedBox(
+                        width: 150,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -2421,8 +2472,6 @@ class _OtraPantallaState extends State<OtraPantalla> {
                           ],
                         ),
                       ),
-
-                      SizedBox(width: 6),
                     ],
                   ),
                 ],
