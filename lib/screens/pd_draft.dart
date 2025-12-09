@@ -89,6 +89,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
   double minReduction = 0.0;
   double maxTemp = 0.0;
   double maxDelta = 0.0;
+  double minDelta = 0.0;
 
   String selectedMaterial = 'High Carbon Steel, Stelmor';
   String selectedCarbon = '0.40%';
@@ -2517,7 +2518,8 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                             foregroundColor: showExtraTable ? Colors.white : Colors.black,
                                             side: BorderSide(color: const Color(0xFF58585a)),
                                           ),
-                                          child: Text("Part Numbers"),
+                                          child: Text("Part Numbers", style: TextStyle(fontSize: 15)),
+                                          
                                         ),
 
                                         SizedBox(width: 8),
@@ -2534,7 +2536,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                             foregroundColor: showPressureTable ?  Colors.white : Colors.black,
                                             side: BorderSide(color: const Color(0xFF58585a)),
                                           ),
-                                          child: Text("Pressure Table"),
+                                          child: Text("Pressure Table", style: TextStyle(fontSize: 15)),
                                         ),
 
                                         SizedBox(width: 8),
@@ -2555,7 +2557,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                             foregroundColor: usingStockDies ? Colors.white : Colors.black,
                                             side: const BorderSide(color: Color(0xFF58585a)),
                                           ),
-                                          child: const Text("Paramount Standard Dies"),
+                                          child: const Text("Paramount Standard Dies", style: TextStyle(fontSize: 15)),
                                         ),
 
                                         SizedBox(width: 8),
@@ -2573,7 +2575,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                             foregroundColor: !usingStockDies ? Colors.white : Colors.black,
                                             side: const BorderSide(color: Color(0xFF58585a)),
                                           ),
-                                          child: const Text("Regular Dies"),
+                                          child: const Text("Regular Dies", style: TextStyle(fontSize: 15)),
                                         ),
                                       ],
                                     ),
@@ -2605,28 +2607,28 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                         padding: EdgeInsets.all(6.0),
                                                         child: Text(
                                                           "# of Die",
-                                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                                                         ),
                                                       ),
                                                       Padding(
                                                         padding: EdgeInsets.all(6.0),
                                                         child: Text(
                                                           "Die Type", 
-                                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                                                         ),
                                                       ),
                                                       Padding(
                                                         padding: EdgeInsets.all(6.0),
                                                         child: Text(
                                                           "Part Number",
-                                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                                                         ),
                                                       ),
                                                       Padding(
                                                         padding: EdgeInsets.all(6.0),
                                                         child: Text(
                                                           "Action",
-                                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                                                         ),
                                                       ),
                                                     ],
@@ -2641,7 +2643,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                           padding: const EdgeInsets.all(6.0),
                                                           child: Text(
                                                             i.toString(),
-                                                            style: const TextStyle(fontSize: 15),
+                                                            style: const TextStyle(fontSize: 16),
                                                           ),
                                                         ),
 
@@ -2736,7 +2738,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                                         value: val,
                                                                         child: Text(
                                                                           val,
-                                                                          style: const TextStyle(fontSize: 15),
+                                                                          style: const TextStyle(fontSize: 16),
                                                                         ),
                                                                       ))
                                                                   .toList();
@@ -2762,7 +2764,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                                     selectedDieTypes[i - 1] ?? "TR4",
                                                                   )
                                                                 : "-",
-                                                            style: const TextStyle(fontSize: 15),
+                                                            style: const TextStyle(fontSize: 16),
                                                           ),
                                                         ),
 
@@ -2786,6 +2788,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                                             ? diameters[i] 
                                                                             : diameters[i] * 25.4,
                                                                         selectedSystem: selectedSystem,
+                                                                        customDeltaRange: [minDelta,maxDelta],
                                                                       ),
                                                                     ),
                                                                   );
@@ -2795,7 +2798,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                               },
                                                               style: ElevatedButton.styleFrom(
                                                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                                                textStyle: const TextStyle(fontSize: 15),
+                                                                textStyle: const TextStyle(fontSize: 16),
                                                                 minimumSize: Size.zero,
                                                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                               ),
@@ -2839,21 +2842,21 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                         padding: EdgeInsets.all(6.0),
                                                         child: Text(
                                                           "# of Die",
-                                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                                                         ),
                                                       ),
                                                       Padding(
                                                         padding: EdgeInsets.all(6.0),
                                                         child: Text(
                                                           "Die Type", // Nuevo encabezado
-                                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                                                         ),
                                                       ),
                                                       Padding(
                                                         padding: EdgeInsets.all(6.0),
                                                         child: Text(
                                                           "Pressure Number",
-                                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                                                         ),
                                                       ),
                                                     ],
@@ -2868,7 +2871,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                           padding: const EdgeInsets.all(6.0),
                                                           child: Text(
                                                             i.toString(),
-                                                            style: const TextStyle(fontSize: 15),
+                                                            style: const TextStyle(fontSize: 16),
                                                           ),
                                                         ),
 
@@ -2899,7 +2902,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                                 return "?";
                                                               }
                                                             })(),
-                                                            style: const TextStyle(fontSize: 15),
+                                                            style: const TextStyle(fontSize: 16),
                                                           ),
                                                         ),
 
@@ -3194,8 +3197,8 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                     final int materialIndex = materialOptions.indexOf(selectedMaterial);
 
                                                     // Determinar rango según materialIndex
-                                                    double minDelta = 0.0;
-                                                    double maxDelta = 999.0;
+                                                    minDelta = 0.0;
+                                                    maxDelta = 999.0;
 
                                                     if (isCustomDelta) {
                                                       // Usar valores del usuario si está activo el modo Custom
@@ -3473,7 +3476,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                         : chartType == 1
                                                             ? "Delta"
                                                             : "Reduction (%)",
-                                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                                                   textAlign: TextAlign.center,
                                                 ),
                                               ),
@@ -4061,7 +4064,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                               child: Text(
                                 "Area Reductions",
                                 style: TextStyle(
-                                  fontSize: 15,
+                                  fontSize: 17,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black,
                                 ),
@@ -4082,14 +4085,14 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                       color: const Color.fromARGB(255, 56, 53, 53),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("Total",
-                                        style: TextStyle(fontSize: 15, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white),
                                       ),
                                     ),
                                     Container(
                                       color: const Color(0xFFe51937),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("${totalReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 15, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white),
                                       ),
                                     ),
                                   ],
@@ -4100,14 +4103,14 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                       color: const Color.fromARGB(255, 83, 79, 79),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("Average",
-                                        style: TextStyle(fontSize: 15, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white),
                                       ),
                                     ),
                                     Container(
                                       color: const Color.fromARGB(255, 221, 51, 77),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("${avgReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 15, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white),
                                       ),
                                     ),
                                   ],
@@ -4118,14 +4121,14 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                       color: const Color.fromARGB(255, 56, 53, 53),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("First",
-                                        style: TextStyle(fontSize: 15, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white),
                                       ),
                                     ),
                                     Container(
                                       color: const Color(0xFFe51937),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("${firstReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 15, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white),
                                       ),
                                     ),
                                   ],
@@ -4136,14 +4139,14 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                       color: const Color.fromARGB(255, 83, 79, 79),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("Last",
-                                        style: TextStyle(fontSize: 15, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white),
                                       ),
                                     ),
                                     Container(
                                       color: const Color.fromARGB(255, 221, 51, 77),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("${lastReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 15, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white),
                                       ),
                                     ),
                                   ],
@@ -4154,14 +4157,14 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                       color: const Color.fromARGB(255, 56, 53, 53),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("Maximum",
-                                        style: TextStyle(fontSize: 15, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white),
                                       ),
                                     ),
                                     Container(
                                       color: const Color(0xFFe51937),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("${maxReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 15, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white),
                                       ),
                                     ),
                                   ],
@@ -4172,14 +4175,14 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                       color: const Color.fromARGB(255, 83, 79, 79),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("Minimum",
-                                        style: TextStyle(fontSize: 15, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white),
                                       ),
                                     ),
                                     Container(
                                       color: const Color.fromARGB(255, 221, 51, 77),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("${minReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 15, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white),
                                       ),
                                     ),
                                   ],

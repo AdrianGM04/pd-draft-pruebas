@@ -129,6 +129,7 @@ class DieDesignerScreen extends StatefulWidget {
   final double? alturaInicial;  // initial wire diameter at entry (in mm)
   final double? reductionAngle; // reduction angle (in degrees)
   final String? selectedSystem;
+  final List<double>? customDeltaRange;
 
   const DieDesignerScreen({
     super.key,
@@ -137,6 +138,8 @@ class DieDesignerScreen extends StatefulWidget {
     this.alturaInicial,
     this.reductionAngle,
     this.selectedSystem,
+    this.customDeltaRange,
+    
   });
 
   @override
@@ -276,6 +279,8 @@ List<double> _rangeOf(String grade) {
   final TextEditingController blMaxController2          = TextEditingController();
   final TextEditingController reductionAreaController2  = TextEditingController();
   final TextEditingController deltaController2          = TextEditingController();
+  final TextEditingController minDeltaController = TextEditingController();
+  final TextEditingController maxDeltaController = TextEditingController();
   // ============================================================
 
 // arriba en tu State (ya importas dart:math)
@@ -323,7 +328,7 @@ double get _maxDieWidthMm =>
   static const double kRightNudge = 0.0;   // pon 10,  20 si quieres más a la DER
 
   // Rango Delta Factor Δ para cada grado
-  static const Map<String, List<double>> _deltaRanges = {
+  static Map<String, List<double>> _deltaRanges = {
     'None'       : [0.00, 99.99], // sin restricción
     'Custom'     : [1.00, 2.00],
     'Low Carbon' : [1.30, 2.25],
@@ -716,6 +721,12 @@ bool _pnMatchesSelected(String pnRaw) {
   void initState() {
     super.initState();
     _showInches = widget.selectedSystem == 'imperial';
+    if (widget.customDeltaRange != null && widget.customDeltaRange!.length == 2) {
+      _deltaRanges['Custom'] = [
+        widget.customDeltaRange![0],
+        widget.customDeltaRange![1],
+      ];
+    }
     // 1) setup inicial del lado izquierdo (principal)
     _applyDieType(_selectedDieType);
     _syncAngleInputWithMode();
@@ -1244,30 +1255,108 @@ Future<void> _openSettings() async {
                       const SizedBox(height: 24),
 
                       // ─── Custom Die ───
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text('Custom Die',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text('Off'),
-                          const SizedBox(width: 6),
-                          Switch(
-                            value: tempCustomDie,
-                            onChanged: (v) => setLocalState(() => tempCustomDie = v),
-                            thumbColor: WidgetStateProperty.all(Colors.black),
-                            trackColor: WidgetStateProperty.resolveWith<Color>(
-                              (s) => s.contains(WidgetState.selected) ? kPdRed : Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          const Text('On'),
-                        ],
-                      ),
+const Align(
+  alignment: Alignment.centerLeft,
+  child: Text(
+    'Custom Die',
+    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+  ),
+),
+const SizedBox(height: 6),
 
+Row(
+  mainAxisAlignment: MainAxisAlignment.center,
+  children: [
+    const Text('Off'),
+    const SizedBox(width: 6),
+    Switch(
+      value: tempCustomDie,
+      onChanged: (v) => setLocalState(() => tempCustomDie = v),
+      thumbColor: WidgetStateProperty.all(Colors.black),
+      trackColor: WidgetStateProperty.resolveWith<Color>(
+        (s) => s.contains(WidgetState.selected) ? kPdRed : Colors.white,
+      ),
+    ),
+    const SizedBox(width: 6),
+    const Text('On'),
+  ],
+),
+
+// ─── Campos Min & Max Delta (solo cuando ON) ───
+if (tempCustomDie) ...[
+  const SizedBox(height: 10),
+
+  Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      // MIN DELTA
+      SizedBox(
+        width: 120,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Min Delta",
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 4),
+            TextField(
+              controller: minDeltaController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+
+              // ← Aquí actualiza el mapa
+              onChanged: (val) {
+                double v = double.tryParse(val) ?? 0.0;
+                setLocalState(() {
+                  _deltaRanges['Custom']![0] = v;
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+
+      const SizedBox(width: 20),
+
+      // MAX DELTA
+      SizedBox(
+        width: 120,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Max Delta",
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 4),
+            TextField(
+              controller: maxDeltaController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+
+              // ← Aquí actualiza el mapa
+              onChanged: (val) {
+                double v = double.tryParse(val) ?? 0.0;
+                setLocalState(() {
+                  _deltaRanges['Custom']![1] = v;
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+    ],
+  ),
+],
+
+                      
                       const SizedBox(height: 24),
 
                       // ─── botones ───
