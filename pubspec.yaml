@@ -36,6 +36,7 @@ dependencies:
   printing: ^5.12.0
   window_manager: ^0.3.6
   shared_preferences: ^2.2.2
+  excel: ^2.1.0
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -90,6 +91,7 @@ flutter:
     - assets/images/titulo5-logo.png
     - assets/scripts/
     - assets/sdtcvbnm.json
+    - assets/excel/
 
   fonts:
     - family: MYRIAD

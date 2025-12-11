@@ -13,6 +13,8 @@ import 'dart:io' as io;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'calculo.dart';
 import '../models/globals.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:excel/excel.dart' as xls;
 
 // Se crea el estado de a pantalla de PD-Draft
 class OtraPantalla extends StatefulWidget {
@@ -164,6 +166,18 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
   List<String> filteredCarbonOptions = [];
 
+  double limInfTR4D = 0;
+  double limInfTR4 = 0;
+  double limInfTR6 = 0;
+  double limInfTR8 = 0;
+
+  double limSupTR4D = 0;
+  double limSupTR4 = 0;
+  double limSupTR6 = 0;
+  double limSupTR8 = 0;
+
+
+
   // Funcion para generar el numero de parte que se puede ver en la tabla bajo el boton "Part Number"
   String generatePartNumber(double angle, double diameter, String selectedSystem, String prefix) {
     String angleStr = angle.toStringAsFixed(0);
@@ -257,6 +271,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
         String mushySNS = DateFormat('yyyy-MM-dd').format(hoy);
         dateController.text = mushySNS;
       }
+      loadRanges(selectedSystem);
     });
     loadSheetData(0);
   }
@@ -584,6 +599,64 @@ class _OtraPantallaState extends State<OtraPantalla> {
         );
       }
 
+  }
+
+  // Funcion para obtener los limites de cada tipo de inserto obtenido del xslx
+  Future<void> loadRanges(String unitSystem) async {
+    // Leer manifest para encontrar el archivo xlsx real
+    final manifestContent = await rootBundle.loadString('AssetManifest.json');
+    final Map<String, dynamic> manifestMap = json.decode(manifestContent);
+
+    // Buscar automáticamente cualquier archivo .xlsx dentro de assets/data/
+    final xlsxFiles = manifestMap.keys
+        .where((path) => path.contains('assets/excel/') && path.endsWith('.xlsx'))
+        .toList();
+
+    if (xlsxFiles.isEmpty) {
+      print("No se encontró ningún archivo XLSX en assets/data/");
+      return;
+    }
+
+    // Tomamos el primero encontrado
+    final String xlsxPath = xlsxFiles.first;
+    print("Usando archivo XLSX: $xlsxPath");
+
+    // Cargar bytes del archivo detectado
+    ByteData data = await rootBundle.load(xlsxPath);
+    List<int> bytes = data.buffer.asUint8List();
+    var excel = xls.Excel.decodeBytes(bytes);
+
+    var sheet = excel['Module Variants'];
+
+    double read(int row, int col) {
+      var cell = sheet.cell(
+        xls.CellIndex.indexByColumnRow(columnIndex: col, rowIndex: row),
+      );
+      return double.tryParse(cell.value.toString()) ?? 0.0;
+    }
+
+    // Columnas para imperial o metric
+    int colMin = (unitSystem == "imperial") ? 6 : 8;
+    int colMax = (unitSystem == "imperial") ? 7 : 9;
+
+    // FILAS
+    limInfTR4  = read(7,  colMin);
+    limSupTR4  = read(7,  colMax);
+
+    limInfTR4D = read(8,  colMin);
+    limSupTR4D = read(8,  colMax);
+
+    limInfTR6  = read(9,  colMin);
+    limSupTR6  = read(9,  colMax);
+
+    limInfTR8  = read(10, colMin);
+    limSupTR8  = read(10, colMax);
+
+    print("VALORES ASIGNADOS:");
+    print("min1=$limInfTR4,  max1=$limSupTR4");
+    print("min2=$limInfTR4D, max2=$limSupTR4D");
+    print("min3=$limInfTR6,  max3=$limSupTR6");
+    print("min4=$limInfTR8,  max4=$limSupTR8");
   }
 
   // Funcion que envia los valores de la app al archivo calculo para hacer los calculos
@@ -2670,25 +2743,25 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                               // RANGOS DE DIÁMETRO CONDICIONALES SEGÚN SISTEMA
                                                               if (selectedSystem == 'metric') {
                                                                 // SISTEMA MÉTRICO (mm)
-                                                                if (diametro >= 0.15 && diametro < 0.75) {
+                                                                if (diametro >= limInfTR4D && diametro < limInfTR4) {
                                                                   opciones = ["TR4D"];
-                                                                } else if (diametro >= 0.75 && diametro < 1.5) {
+                                                                } else if (diametro >= limInfTR4 && diametro < limSupTR4D) {
                                                                   opciones = ["TR4D", "TR4"];
-                                                                } else if (diametro >= 1.5 && diametro < 4.0) {
+                                                                } else if (diametro >= limSupTR4D && diametro < limInfTR6) {
                                                                   opciones = ["TR4"];
-                                                                } else if (diametro >= 4.0 && diametro < 4.5) {
+                                                                } else if (diametro >= limInfTR6 && diametro < limInfTR8) {
                                                                   opciones = ["TR4", "TR6"];
-                                                                } else if (diametro >= 4.5 && diametro < 4.9) {
+                                                                } else if (diametro >= limInfTR8 && diametro < 4.9) {
                                                                   opciones = ["TR4", "TR6", "TR8"];
-                                                                } else if (diametro >= 4.9 && diametro < 5.85) {
+                                                                } else if (diametro >= 4.9 && diametro < limSupTR4) {
                                                                   opciones = ["TR4", "TR6", "TR8", "T30"];
-                                                                } else if (diametro >= 5.85 && diametro < 8.9) {
+                                                                } else if (diametro >= limSupTR4 && diametro < limSupTR6) {
                                                                   opciones = ["TR6", "TR8", "T30"];
-                                                                } else if (diametro >= 8.9 && diametro < 12.6) {
+                                                                } else if (diametro >= limSupTR6 && diametro < 12.6) {
                                                                   opciones = ["TR8", "T30"];
-                                                                } else if (diametro >= 12.6 && diametro < 13.0) {
+                                                                } else if (diametro >= 12.6 && diametro < limSupTR8) {
                                                                   opciones = ["TR8", "T30", "TR9"];
-                                                                } else if (diametro >= 13.0 && diametro < 16.5) {
+                                                                } else if (diametro >= limSupTR8 && diametro < 16.5) {
                                                                   opciones = ["T30", "TR9"];
                                                                 } else if (diametro >= 16.5 && diametro < 22.5) {
                                                                   opciones = ["TR10"];
@@ -2697,25 +2770,25 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                                 }
                                                               } else {
                                                                 // SISTEMA IMPERIAL (pulgadas)
-                                                                if (diametro >= 0.0059 && diametro < 0.0295) {       
+                                                                if (diametro >= limInfTR4D && diametro < limInfTR4) {       
                                                                   opciones = ["TR4D"];
-                                                                } else if (diametro >= 0.0295 && diametro < 0.0591) { 
+                                                                } else if (diametro >= limInfTR4 && diametro < limSupTR4D) { 
                                                                   opciones = ["TR4D", "TR4"];
-                                                                } else if (diametro >= 0.0591 && diametro < 0.1575) { 
+                                                                } else if (diametro >= limSupTR4D && diametro < limInfTR6) { 
                                                                   opciones = ["TR4"];
-                                                                } else if (diametro >= 0.1575 && diametro < 0.1772) { 
+                                                                } else if (diametro >= limInfTR6 && diametro < limInfTR8) { 
                                                                   opciones = ["TR4", "TR6"];
-                                                                } else if (diametro >= 0.1772 && diametro < 0.1929) { 
+                                                                } else if (diametro >= limInfTR8 && diametro < 0.1929) { 
                                                                   opciones = ["TR4", "TR6", "TR8"];
-                                                                } else if (diametro >= 0.1929 && diametro < 0.2303) { 
+                                                                } else if (diametro >= 0.1929 && diametro < limSupTR4) { 
                                                                   opciones = ["TR4", "TR6", "TR8", "T30"];
-                                                                } else if (diametro >= 0.2303 && diametro < 0.3504) { 
+                                                                } else if (diametro >= limSupTR4 && diametro < limSupTR6) { 
                                                                   opciones = ["TR6", "TR8", "T30"];
-                                                                } else if (diametro >= 0.3504 && diametro < 0.4961) { 
+                                                                } else if (diametro >= limSupTR6 && diametro < 0.4961) { 
                                                                   opciones = ["TR8", "T30"];
-                                                                } else if (diametro >= 0.4961 && diametro < 0.5118) { 
+                                                                } else if (diametro >= 0.4961 && diametro < limSupTR8) { 
                                                                   opciones = ["TR8", "T30", "TR9"];
-                                                                } else if (diametro >= 0.5118 && diametro < 0.6496) { 
+                                                                } else if (diametro >= limSupTR8 && diametro < 0.6496) { 
                                                                   opciones = ["T30", "TR9"];
                                                                 } else if (diametro >= 0.6496 && diametro < 0.8858) { 
                                                                   opciones = ["TR10"];
@@ -4040,6 +4113,16 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                     side: const BorderSide(color: Color(0xFF58585a)), // Borde gris oscuro, opcional
                                   ), 
                                 ),
+                                /* OutlinedButton.icon(
+                                  onPressed: onExportPressed,
+                                  icon: Icon(Icons.download),
+                                  label: Text("Export POINT"),
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: Colors.grey.shade100,         // Fondo blanco
+                                    foregroundColor: const Color.fromARGB(255, 110, 83, 207),         // Texto e ícono negros
+                                    side: const BorderSide(color: Color(0xFF58585a)), // Borde gris oscuro, opcional
+                                  ), 
+                                ), */
                               ],
                             ),
                           ],
