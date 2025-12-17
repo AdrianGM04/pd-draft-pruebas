@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'die_designer.dart';
+import 'dart:typed_data';
 import 'dart:convert';
 import 'package:file_saver/file_saver.dart';
 import 'package:file_picker/file_picker.dart';
@@ -15,6 +16,7 @@ import 'calculo.dart';
 import '../models/globals.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:excel/excel.dart' as xls;
+
 
 // Se crea el estado de a pantalla de PD-Draft
 class OtraPantalla extends StatefulWidget {
@@ -579,6 +581,12 @@ class _OtraPantallaState extends State<OtraPantalla> {
     await exportSheetsToCSV(sheets);
   }
 
+  // Funcion que inicializa el proceso de exportacion de datos
+  void onExportXLSXPressed() async {
+    saveCurrentSheetData();  
+    await exportSheetsToXLSX(sheets,selectedDieTypes);
+  }
+
   // Funcion para identificar la fecha actual al momento de presionar el apartado de "Date"
   Future<void> _selectDate() async {
      DateTime hoy = DateTime.now();
@@ -652,11 +660,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     limInfTR8  = read(10, colMin);
     limSupTR8  = read(10, colMax);
 
-    print("VALORES ASIGNADOS:");
-    print("min1=$limInfTR4,  max1=$limSupTR4");
-    print("min2=$limInfTR4D, max2=$limSupTR4D");
-    print("min3=$limInfTR6,  max3=$limSupTR6");
-    print("min4=$limInfTR8,  max4=$limSupTR8");
+    
   }
 
   // Funcion que envia los valores de la app al archivo calculo para hacer los calculos
@@ -1842,6 +1846,633 @@ class _OtraPantallaState extends State<OtraPantalla> {
     );
   }
 
+  // Exportar XLSX
+  Future<void> exportSheetsToXLSX(List<SheetData> sheets, selectedDieTypes) async {
+    var excel = xls.Excel.createExcel();
+    xls.Sheet sheet = excel['Sheet1'];
+
+    int currentRow = 0; 
+
+    for (int i = 0; i < sheets.length; i++) {
+      final sheetData = sheets[i];
+
+      // Encabezados EXACTOS solicitados
+      final headers = [
+        "Customer Name",
+        "Customer Preferred Units",
+        "Sourced from Mexico",
+        "Units",
+        "Insert Type",
+        "Quantity",
+        "Diameter (mm)",
+        "Diameter (in)",
+        "Angle",
+        "Material",
+        "Bearing Length",
+        "Casing",
+        "Finish",
+        "Diameter Tolerance (in)",
+        "Diameter Tolerance (mm)"
+      ];
+
+      for (int col = 0; col < headers.length; col++) {
+        sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: col, rowIndex: currentRow))
+            .value = headers[col];
+      }
+      currentRow++;
+
+      for (int die = 0; die < sheetData.numberOfDies; die++) {
+        
+        // Column 0: Customer Name
+        sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: currentRow))
+            .value = sheetData.clientName;
+
+        // Column 1: Customer Preferred Unit
+        sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: currentRow))
+            .value = sheetData.selectedSystem;
+        
+        // Column 2: Sourced From Mexico
+        sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: currentRow))
+            .value = "";
+
+        // Column 3: Units
+        sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: currentRow))
+            .value = sheetData.selectedSystem;
+
+        // Column 4: Insert Type
+        sheet
+            .cell(
+            xls.CellIndex.indexByColumnRow(
+                    columnIndex: 4,         
+                    rowIndex: currentRow,
+                  ),
+                )
+            .value = selectedDieTypes[die];
+
+        // Column 5: Quantity
+        sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: currentRow))
+            .value = "";
+
+        // Column 6: Diameter (mm)
+        switch (sheetData.selectedSystem) {
+          case "metric":
+            sheet
+              .cell(
+              xls.CellIndex.indexByColumnRow(
+                      columnIndex: 6,         
+                      rowIndex: currentRow,
+                    ),
+                  )
+              .value = (sheetData.manualDiameters[die+1]).toStringAsFixed(sheetData.decimals);
+            break;
+          case "imperial":
+            sheet
+              .cell(
+              xls.CellIndex.indexByColumnRow(
+                      columnIndex: 6,         
+                      rowIndex: currentRow,
+                    ),
+                  )
+              .value = (sheetData.manualDiameters[die+1]* 25.4).toStringAsFixed(sheetData.decimals);
+            break;
+        }
+
+        // Column 7: Diameter (in)
+        switch (sheetData.selectedSystem) {
+          case "metric":
+            sheet
+              .cell(
+              xls.CellIndex.indexByColumnRow(
+                      columnIndex: 7,         
+                      rowIndex: currentRow,
+                    ),
+                  )
+              .value = (sheetData.manualDiameters[die+1]/ 25.4).toStringAsFixed(sheetData.decimals);
+            break;
+          case "imperial":
+            sheet
+              .cell(
+              xls.CellIndex.indexByColumnRow(
+                      columnIndex: 7,         
+                      rowIndex: currentRow,
+                    ),
+                  )
+              .value = (sheetData.manualDiameters[die+1]).toStringAsFixed(sheetData.decimals);
+            break;
+        }
+
+        // Column 8: Angle
+        sheet
+            .cell(
+            xls.CellIndex.indexByColumnRow(
+                    columnIndex: 8,         
+                    rowIndex: currentRow,
+                  ),
+                )
+            .value = sheetData.manualAngles[die];
+
+        // Column 9: Material
+        sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: 9, rowIndex: currentRow))
+            .value = sheetData.selectedMaterial;  
+
+        // Column 10: Bearing Length    
+        sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: 10, rowIndex: currentRow))
+            .value = ""; 
+
+        // Column 11: Casing  
+        sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: 11, rowIndex: currentRow))
+            .value = "";
+
+        // Column 12: Finish 
+        sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: 12, rowIndex: currentRow))
+            .value = "";
+
+        // Column 13: Diameter Tolerance (in)
+        switch (sheetData.selectedSystem) {
+          case "metric":
+            switch(selectedDieTypes[die]){
+              case "TR4D":
+                switch(sheetData.manualAngles[die]){
+                  case 9:
+                    if((sheetData.manualDiameters[die+1]/ 25.4) > 0.0250){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "0.0005";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "*";
+                    }
+                    break;
+                }
+                break;
+              case "TR4":
+                switch(sheetData.manualAngles[die]){
+                  case 9:
+                    if((sheetData.manualDiameters[die+1]/ 25.4) > 0.08){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "0.0010";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "0.0005";
+                    }
+                    break;
+
+                  case 12:
+                    if((sheetData.manualDiameters[die+1]/ 25.4) < 0.08){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "0.0005";
+                    } else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "0.0010";
+                    }
+                    break;
+
+                  case 16:
+                    if((sheetData.manualDiameters[die+1]/ 25.4) < 0.1180){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "*";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "0.0010";
+                    }
+                    break;
+                }
+                break;
+              case "TR6":
+                switch(sheetData.manualAngles[die]){
+                  case 9:
+                    sheet
+                      .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                      .value = "0.05";
+                    break;
+                  case 12:
+                    sheet
+                      .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                      .value = "0.05";
+                    break;
+                  case 16:
+                    if((sheetData.manualDiameters[die+1]/ 25.4) < 0.1850){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "*";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "0.0010";
+                    }
+                    break;
+                }
+                break;
+              case "TR8":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                  .value = "*";
+                break;
+              case "TR9":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                  .value = "*";
+                break;
+              case "TR10":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                  .value = "*";
+                break;
+              case "T30":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                  .value = "*";
+                break;
+              case "TR11":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                  .value = "*";
+                break;
+            }
+          case "imperial":
+            switch(selectedDieTypes[die]){
+              case "TR4D":
+                switch(sheetData.manualAngles[die]){
+                  case 9:
+                    if((sheetData.manualDiameters[die+1]) > 0.0250){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "0.0005";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "*";
+                    }
+                    break;
+                }
+                break;
+              case "TR4":
+                switch(sheetData.manualAngles[die]){
+                  case 9:
+                    if((sheetData.manualDiameters[die+1]) > 0.08){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "0.0010";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "0.0005";
+                    }
+                    break;
+
+                  case 12:
+                    if((sheetData.manualDiameters[die+1]) < 0.08){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "0.0005";
+                    } else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "0.0010";
+                    }
+                    break;
+
+                  case 16:
+                    if((sheetData.manualDiameters[die+1]) < 0.1180){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "*";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "0.0010";
+                    }
+                    break;
+                }
+                break;
+              case "TR6":
+                switch(sheetData.manualAngles[die]){
+                  case 9:
+                    sheet
+                      .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                      .value = "0.05";
+                    break;
+                  case 12:
+                    sheet
+                      .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                      .value = "0.05";
+                    break;
+                  case 16:
+                    if((sheetData.manualDiameters[die+1]) < 0.1850){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "*";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                        .value = "0.0010";
+                    }
+                    break;
+                }
+                break;
+              case "TR8":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                  .value = "*";
+                break;
+              case "TR9":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                  .value = "*";
+                break;
+              case "TR10":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                  .value = "*";
+                break;
+              case "T30":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                  .value = "*";
+                break;
+              case "TR11":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 13, rowIndex: currentRow))
+                  .value = "*";
+                break;
+          }
+            break;
+        } 
+
+        // Column 14: Diameter Tolerance (mm)
+        switch (sheetData.selectedSystem) {
+          case "metric":
+            switch(selectedDieTypes[die]){
+              case "TR4D":
+                switch(sheetData.manualAngles[die]){
+                  case 9:
+                    if(sheetData.manualDiameters[die+1] > 0.64){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "0.01";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "*";
+                    }
+                    break;
+                }
+                break;
+              case "TR4":
+                switch(sheetData.manualAngles[die]){
+                  case 9:
+                    if(sheetData.manualDiameters[die+1] > 1.99){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "0.02";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "0.01";
+                    }
+                    break;
+
+                  case 12:
+                    if(sheetData.manualDiameters[die+1] < 2.00){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "0.01";
+                    }else if (sheetData.manualDiameters[die+1] < 4.99){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "0.02";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "0.05";
+                    }
+                    break;
+
+                  case 16:
+                    if(sheetData.manualDiameters[die+1] < 3.00){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "*";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "0.05";
+                    }
+                    break;
+                }
+                break;
+              case "TR6":
+                switch(sheetData.manualAngles[die]){
+                  case 9:
+                    sheet
+                      .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                      .value = "0.05";
+                    break;
+                  case 12:
+                    sheet
+                      .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                      .value = "0.05";
+                    break;
+                  case 16:
+                    if(sheetData.manualDiameters[die+1] < 5.50){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "*";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "0.05";
+                    }
+                    break;
+                }
+                break;
+              case "TR8":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                  .value = "*";
+                break;
+              case "TR9":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                  .value = "*";
+                break;
+              case "TR10":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                  .value = "*";
+                break;
+              case "T30":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                  .value = "*";
+                break;
+              case "TR11":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                  .value = "*";
+                break;
+            }
+            break;
+          case "imperial":
+            switch(selectedDieTypes[die]){
+              case "TR4D":
+                switch(sheetData.manualAngles[die]){
+                  case 9:
+                    if((sheetData.manualDiameters[die+1]* 25.4) > 0.64){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "0.01";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "*";
+                    }
+                    break;
+                }
+                break;
+              case "TR4":
+                switch(sheetData.manualAngles[die]){
+                  case 9:
+                    if((sheetData.manualDiameters[die+1]* 25.4) > 1.99){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "0.02";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "0.01";
+                    }
+                    break;
+
+                  case 12:
+                    if((sheetData.manualDiameters[die+1]* 25.4) < 2.00){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "0.01";
+                    }else if ((sheetData.manualDiameters[die+1]* 25.4) < 4.99){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "0.02";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "0.05";
+                    }
+                    break;
+
+                  case 16:
+                    if((sheetData.manualDiameters[die+1]* 25.4) < 3.00){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "*";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "0.05";
+                    }
+                    break;
+                }
+                break;
+              case "TR6":
+                switch(sheetData.manualAngles[die]){
+                  case 9:
+                    sheet
+                      .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                      .value = "0.05";
+                    break;
+                  case 12:
+                    sheet
+                      .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                      .value = "0.05";
+                    break;
+                  case 16:
+                    if((sheetData.manualDiameters[die+1]* 25.4) < 5.50){
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "*";
+                    }else{
+                      sheet
+                        .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                        .value = "0.05";
+                    }
+                    break;
+                }
+                break;
+              case "TR8":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                  .value = "*";
+                break;
+              case "TR9":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                  .value = "*";
+                break;
+              case "TR10":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                  .value = "*";
+                break;
+              case "T30":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                  .value = "*";
+                break;
+              case "TR11":
+                sheet
+                  .cell(xls.CellIndex.indexByColumnRow(columnIndex: 14, rowIndex: currentRow))
+                  .value = "*";
+                break;
+            }
+            break;
+        }
+
+        currentRow++;
+      }
+
+      // Línea vacía entre Sheets
+      currentRow++;
+    }
+
+    // Convertir List<int> a Uint8List
+    final Uint8List bytes = Uint8List.fromList(excel.encode()!);
+
+    final now = DateTime.now();
+    final formattedDate = DateFormat('yyyy-MM-dd_HH-mm').format(now);
+    final fileName = 'pd_draft_xlsx_$formattedDate';
+
+    await FileSaver.instance.saveFile(
+      name: fileName,
+      bytes: bytes,
+      ext: "xlsx",
+      mimeType: MimeType.microsoftExcel,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('XSLX exported succesfully, check Downloads'),
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
   // Importar CSV
   Future<List<SheetData>> importSheetsFromCustomCSV() async {
     final result = await FilePicker.platform.pickFiles(
@@ -1975,6 +2606,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
   // Funny
   void magicDoohickey({required double paso, required bool esIncremento, }) async {
+      // Esto era un arreglo un bug que habia en donde se dba el valor incorrecto al hacer full taper
       const int maxIntentos = 10;
       int intentos = 0;
 
@@ -4089,6 +4721,17 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                 ),
                                 SizedBox(width: 16),
                                 OutlinedButton.icon(
+                                  onPressed: onExportXLSXPressed,
+                                  icon: Icon(Icons.download),
+                                  label: Text("Export POINT"),
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: Colors.grey.shade100,         // Fondo blanco
+                                    foregroundColor: const Color.fromARGB(255, 110, 83, 207),         // Texto e ícono negros
+                                    side: const BorderSide(color: Color(0xFF58585a)), // Borde gris oscuro, opcional
+                                  ), 
+                                ),
+                                SizedBox(width: 16),
+                                OutlinedButton.icon(
                                   onPressed: () async {
                                     final imported = await importSheetsFromCustomCSV();
                                     if (imported.isNotEmpty) {
@@ -4113,16 +4756,6 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                     side: const BorderSide(color: Color(0xFF58585a)), // Borde gris oscuro, opcional
                                   ), 
                                 ),
-                                /* OutlinedButton.icon(
-                                  onPressed: onExportPressed,
-                                  icon: Icon(Icons.download),
-                                  label: Text("Export POINT"),
-                                  style: OutlinedButton.styleFrom(
-                                    backgroundColor: Colors.grey.shade100,         // Fondo blanco
-                                    foregroundColor: const Color.fromARGB(255, 110, 83, 207),         // Texto e ícono negros
-                                    side: const BorderSide(color: Color(0xFF58585a)), // Borde gris oscuro, opcional
-                                  ), 
-                                ), */
                               ],
                             ),
                           ],
