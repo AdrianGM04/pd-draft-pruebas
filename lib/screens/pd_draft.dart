@@ -1856,7 +1856,6 @@ class _OtraPantallaState extends State<OtraPantalla> {
     for (int i = 0; i < sheets.length; i++) {
       final sheetData = sheets[i];
 
-      // Encabezados EXACTOS solicitados
       final headers = [
         "Customer Name",
         "Customer Preferred Units",
@@ -4001,7 +4000,6 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                               final parsed = int.tryParse(value);
                                                               if (parsed != null && parsed > 0) {
                                                                 setState(() {
-                                                                  // asegurar longitud y asignar en la posición correcta
                                                                   if (targetIndex < manualAngles.length) {
                                                                     manualAngles[targetIndex] = parsed;
                                                                   } else {
@@ -4010,7 +4008,6 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                                     }
                                                                     manualAngles[targetIndex] = parsed;
                                                                   }
-                                                                  // marcar la celda visualmente (anglesModified incluye índice 0)
                                                                   if (index < anglesModified.length) {
                                                                     anglesModified[index] = true;
                                                                   }
