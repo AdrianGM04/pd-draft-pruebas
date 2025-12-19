@@ -4,7 +4,6 @@ import 'die_designer.dart';
 import 'pd_draft.dart';
 import '../models/globals.dart';
 
-
 // Se crea el estado inicial de la hubscreen de la APP
 class HubScreen extends StatefulWidget {
   const HubScreen({super.key});
@@ -17,6 +16,8 @@ class HubScreen extends StatefulWidget {
 class _HubScreenState extends State<HubScreen> {
   String _selectedLanguage = "English";
   String _selectedSystem = "Metric";
+  int _memoryDecimals = 2;
+
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -33,10 +34,16 @@ class _HubScreenState extends State<HubScreen> {
 
     setState(() {
       _selectedLanguage = prefs.getString('language') ?? "English";
+
       final savedSystem = prefs.getString('system') ?? "metric";
       _selectedSystem =
           savedSystem[0].toUpperCase() + savedSystem.substring(1).toLowerCase();
+
+      _memoryDecimals = prefs.getInt('memoryDecimals') ?? 2;
+
+      // Variables globales
       globalSelectedSystem = savedSystem;
+      memoryDecimals = _memoryDecimals;
     });
 
     if (!firstTime) {
@@ -54,13 +61,18 @@ class _HubScreenState extends State<HubScreen> {
 
     await prefs.setString('language', _selectedLanguage);
     await prefs.setString('system', _selectedSystem.toLowerCase());
+    await prefs.setInt('memoryDecimals', _memoryDecimals);
 
     globalSelectedSystem = _selectedSystem.toLowerCase();
+    memoryDecimals = _memoryDecimals;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          "Preferences saved:\nLanguage: $_selectedLanguage\nUnit System: ${_selectedSystem.toLowerCase()}",
+          "Preferences saved:\n"
+          "Language: $_selectedLanguage\n"
+          "Unit System: ${_selectedSystem.toLowerCase()}\n"
+          "Decimals: $_memoryDecimals",
         ),
         duration: const Duration(seconds: 2),
       ),
@@ -71,7 +83,7 @@ class _HubScreenState extends State<HubScreen> {
   void _navigateTo(BuildContext context, Widget page) {
     Navigator.push(context, MaterialPageRoute(builder: (_) => page));
   }
-  
+
   // Se crearon los botones de lenguaje
   Widget _buildLanguageButtons() {
     final List<String> languages = ["English", "Español", "Français"];
@@ -91,10 +103,8 @@ class _HubScreenState extends State<HubScreen> {
               selected: _selectedLanguage == lang,
               selectedColor: Colors.blueGrey,
               backgroundColor: Colors.grey.shade300,
-              onSelected: (bool selected) {
-                setState(() {
-                  _selectedLanguage = lang;
-                });
+              onSelected: (_) {
+                setState(() => _selectedLanguage = lang);
                 _savePreferences();
               },
             );
@@ -123,10 +133,39 @@ class _HubScreenState extends State<HubScreen> {
               selected: _selectedSystem == sys,
               selectedColor: Colors.blueGrey,
               backgroundColor: Colors.grey.shade300,
-              onSelected: (bool selected) {
-                setState(() {
-                  _selectedSystem = sys;
-                });
+              onSelected: (_) {
+                setState(() => _selectedSystem = sys);
+                _savePreferences();
+              },
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  // Selector de número de decimales
+  Widget _buildDecimalsSelector() {
+    final List<int> decimalsOptions = [2, 3, 4];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Number of Decimals:",
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: decimalsOptions.map((dec) {
+            return ChoiceChip(
+              label: Text(dec.toString()),
+              selected: _memoryDecimals == dec,
+              selectedColor: Colors.blueGrey,
+              backgroundColor: Colors.grey.shade300,
+              onSelected: (_) {
+                setState(() => _memoryDecimals = dec);
                 _savePreferences();
               },
             );
@@ -166,6 +205,8 @@ class _HubScreenState extends State<HubScreen> {
             _buildLanguageButtons(),
             const SizedBox(height: 20),
             _buildSystemButtons(),
+            const SizedBox(height: 20),
+            _buildDecimalsSelector(),
           ],
         ),
       ),
@@ -220,11 +261,8 @@ class _HubScreenState extends State<HubScreen> {
                 ],
               ),
               child: const Text(
-                "V 1.25.1",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
+                "V 1.3",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
             ),
           ),

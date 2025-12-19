@@ -164,7 +164,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
   bool isCustomDelta = false;
 
   int? editingSheetIndex; 
-  TextEditingController renameController = TextEditingController();
+  TextEditingController johnStunlock = TextEditingController();
 
   List<String> filteredCarbonOptions = [];
 
@@ -268,9 +268,9 @@ class _OtraPantallaState extends State<OtraPantalla> {
       } else {
         _applyImperialDefaults();
       }
-      if (dateController.text == ''){
+      if (dateController.text.isEmpty) {
         DateTime hoy = DateTime.now();
-        String mushySNS = DateFormat('yyyy-MM-dd').format(hoy);
+        String mushySNS = DateFormat('yyyy-MMM-dd').format(hoy);
         dateController.text = mushySNS;
       }
       loadRanges(selectedSystem);
@@ -297,7 +297,8 @@ class _OtraPantallaState extends State<OtraPantalla> {
   void _applyMetricDefaults() {
     setState(() {
       selectedSystem = 'metric'; // Cambia al sistema seleccionado, no al global
-      decimalsdisplay = 3;
+      decimalsdisplay = memoryDecimals;
+      decimalsController.text = memoryDecimals.toString();
       limitController.text = "120";
       initialDiameterController.text = "5.5";
       finalDiameterController.text = "2";
@@ -316,8 +317,8 @@ class _OtraPantallaState extends State<OtraPantalla> {
   void _applyMetric() {
     setState(() {
       selectedSystem = 'metric'; // Cambia al sistema seleccionado, no al global
-      decimalsdisplay = 2;
-      decimalsController.text = "2";
+      decimalsdisplay = memoryDecimals;
+      decimalsController.text = memoryDecimals.toString();
       limitController.text = "120";
       double initialIn = double.tryParse(initialDiameterController.text) ?? 0;
       double finalIn = double.tryParse(finalDiameterController.text) ?? 0;
@@ -338,7 +339,8 @@ class _OtraPantallaState extends State<OtraPantalla> {
   void _applyImperialDefaults() {
     setState(() {
       selectedSystem = 'imperial'; // Cambia al sistema seleccionado, no al global
-      decimalsdisplay = 3;
+      decimalsdisplay = memoryDecimals;
+      decimalsController.text = memoryDecimals.toString();
       limitController.text = "210";
       initialDiameterController.text = "0.218";
       finalDiameterController.text = "0.080";
@@ -357,8 +359,8 @@ class _OtraPantallaState extends State<OtraPantalla> {
   void _applyImperial() {
     setState(() {
       selectedSystem = 'imperial'; // Cambia al sistema seleccionado, no al global
-      decimalsdisplay = 3;
-      decimalsController.text = "3";
+      decimalsdisplay = memoryDecimals;
+      decimalsController.text = memoryDecimals.toString();
       limitController.text = "210";
       double initialMm = double.tryParse(initialDiameterController.text) ?? 0;
       double finalMm = double.tryParse(finalDiameterController.text) ?? 0;
@@ -585,28 +587,26 @@ class _OtraPantallaState extends State<OtraPantalla> {
   void onExportXLSXPressed() async {
     saveCurrentSheetData();  
     await exportSheetsToXLSX(sheets,selectedDieTypes);
+    await exportSheetsToXLSXP(sheets,selectedDieTypes);
   }
 
-  // Funcion para identificar la fecha actual al momento de presionar el apartado de "Date"
   Future<void> _selectDate() async {
-     DateTime hoy = DateTime.now();
-     int anio = hoy.year; 
+    DateTime hoy = DateTime.now();
+    int anio = hoy.year;
 
-      DateTime? _picked = await showDatePicker(
-        context: context,
+    DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(anio - 5),
+      lastDate: DateTime(anio + 5),
+    );
 
-        initialDate: DateTime.now(),
-        firstDate: DateTime(anio-5),
-        lastDate: DateTime(anio+5)
-      );
-
-      if (_picked != null){
-        setState((){
-            dateController.text = _picked.toString().split(" ")[0];
-          }
-        );
-      }
-
+    if (picked != null) {
+      setState(() {
+        dateController.text =
+            DateFormat('yyyy-MMM-dd').format(picked);
+      });
+    }
   }
 
   // Funcion para obtener los limites de cada tipo de inserto obtenido del xslx
@@ -617,8 +617,8 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
     // Buscar automáticamente cualquier archivo .xlsx dentro de assets/data/
     final xlsxFiles = manifestMap.keys
-        .where((path) => path.contains('assets/excel/') && path.endsWith('.xlsx'))
-        .toList();
+        .where((path) => path.contains('data/flutter_assets/assets/excel/') && path.endsWith('.xlsx'))  // 'assets/excel/' DEBUG
+        .toList();                                                                  // 'data/flutter_assets/assets/excel/' RELEASE               
 
     if (xlsxFiles.isEmpty) {
       print("No se encontró ningún archivo XLSX en assets/data/");
@@ -1846,6 +1846,200 @@ class _OtraPantallaState extends State<OtraPantalla> {
     );
   }
 
+  // Exportar XLSXP
+  Future<void> exportSheetsToXLSXP(List<SheetData> sheets, selectedDieTypes) async {
+    var excel = xls.Excel.createExcel();
+    xls.Sheet sheet = excel['Sheet1'];
+
+    int currentRow = 0;
+    List<double> pressureDieValuesDouble =
+    pressureDieValues.map((e) {
+      if (e.trim().isEmpty) return 0.0;
+      return double.tryParse(e) ?? 0.0;
+    }).toList(); 
+
+    for (int i = 0; i < sheets.length; i++) {
+      final sheetData = sheets[i];
+
+      final headers = [
+        "Customer Name",
+        "Customer Preferred Units",
+        "Units",
+        "Size (in)",
+        "Size (mm)",
+        "Quantity",
+        "Insert Type",
+        "Short Version",
+      ];
+
+      for (int col = 0; col < headers.length; col++) {
+        sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: col, rowIndex: currentRow))
+            .value = headers[col];
+      }
+      currentRow++;
+
+      for (int die = 0; die < sheetData.numberOfDies; die++) {
+        
+        // Column 0: Customer Name
+        sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: currentRow))
+            .value = sheetData.clientName;
+        
+        // Column 1: Customer Preferred Unit
+        sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: currentRow))
+            .value = sheetData.selectedSystem;
+        
+        // Column 2: Units
+        sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: currentRow))
+            .value = sheetData.selectedSystem;
+        
+        // Column 3: Size (in)
+        switch (sheetData.selectedSystem) {
+          case "metric":
+            sheet
+              .cell(
+              xls.CellIndex.indexByColumnRow(
+                      columnIndex: 3,         
+                      rowIndex: currentRow,
+                    ),
+                  )
+              .value = ((sheetData.manualDiameters[die]+(sheetData.manualDiameters[die]*pressureDieValuesDouble[die+1])/100)/25.4).toStringAsFixed(sheetData.decimals);
+            break;
+          case "imperial":
+            sheet
+              .cell(
+              xls.CellIndex.indexByColumnRow(
+                      columnIndex: 3,         
+                      rowIndex: currentRow,
+                    ),
+                  )
+              .value = (sheetData.manualDiameters[die]+(sheetData.manualDiameters[die]*(pressureDieValuesDouble[die+1])/100)).toStringAsFixed(sheetData.decimals);
+            break;
+        }
+
+        // Column 4: Size (mm)
+        switch (sheetData.selectedSystem) {
+          case "metric":
+            sheet
+              .cell(
+              xls.CellIndex.indexByColumnRow(
+                      columnIndex: 4,         
+                      rowIndex: currentRow,
+                    ),
+                  )
+              .value = (sheetData.manualDiameters[die]+(sheetData.manualDiameters[die]*pressureDieValuesDouble[die+1]/100)).toStringAsFixed(sheetData.decimals);
+            break;
+          case "imperial":
+            sheet
+              .cell(
+              xls.CellIndex.indexByColumnRow(
+                      columnIndex: 4,         
+                      rowIndex: currentRow,
+                    ),
+                  )
+              .value = ((sheetData.manualDiameters[die]+(sheetData.manualDiameters[die]*pressureDieValuesDouble[die+1])/100)*25.4).toStringAsFixed(sheetData.decimals);
+            break;
+        }
+
+        // Column 5: Quantity
+        sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: currentRow))
+            .value = "";
+
+        // Column 6: Insert Type   
+        switch (selectedDieTypes[die]) {
+          case "TR4D":
+          case "TR4":
+            sheet
+              .cell(
+              xls.CellIndex.indexByColumnRow(
+                      columnIndex: 6,         
+                      rowIndex: currentRow,
+                    ),
+                  )
+              .value = "PN5";
+            break;
+          case "TR6":
+            sheet
+              .cell(
+              xls.CellIndex.indexByColumnRow(
+                      columnIndex: 6,         
+                      rowIndex: currentRow,
+                    ),
+                  )
+              .value = "PN8";
+            break;
+          case "TR8":
+            sheet
+              .cell(
+              xls.CellIndex.indexByColumnRow(
+                      columnIndex: 6,         
+                      rowIndex: currentRow,
+                    ),
+                  )
+              .value = "PN9";
+            break;
+          case "TR9":
+          case "T30":
+            sheet
+              .cell(
+              xls.CellIndex.indexByColumnRow(
+                      columnIndex: 6,         
+                      rowIndex: currentRow,
+                    ),
+                  )
+              .value = "PN10";
+            break;
+          case "TR10":
+            sheet
+              .cell(
+              xls.CellIndex.indexByColumnRow(
+                      columnIndex: 6,         
+                      rowIndex: currentRow,
+                    ),
+                  )
+              .value = "PN11";
+            break;
+          case "TR11":
+            sheet
+              .cell(
+              xls.CellIndex.indexByColumnRow(
+                      columnIndex: 6,         
+                      rowIndex: currentRow,
+                    ),
+                  )
+              .value = "*";
+            break;
+        }
+        
+        // Column 7: Short Version
+        sheet
+            .cell(xls.CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: currentRow))
+            .value = "";
+
+        currentRow++;
+      }
+    currentRow++;
+    }
+
+    // Convertir List<int> a Uint8List
+    final Uint8List bytes = Uint8List.fromList(excel.encode()!);
+
+    final now = DateTime.now();
+    final formattedDate = DateFormat('yyyy-MM-dd_HH-mm').format(now);
+    final fileName = 'pd_draft_pressure_xlsx_$formattedDate';
+
+    await FileSaver.instance.saveFile(
+      name: fileName,
+      bytes: bytes,
+      ext: "xlsx",
+      mimeType: MimeType.microsoftExcel,
+    );
+  }
+
   // Exportar XLSX
   Future<void> exportSheetsToXLSX(List<SheetData> sheets, selectedDieTypes) async {
     var excel = xls.Excel.createExcel();
@@ -2455,7 +2649,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
     final now = DateTime.now();
     final formattedDate = DateFormat('yyyy-MM-dd_HH-mm').format(now);
-    final fileName = 'pd_draft_xlsx_$formattedDate';
+    final fileName = 'pd_draft_insert_xlsx_$formattedDate';
 
     await FileSaver.instance.saveFile(
       name: fileName,
@@ -2709,37 +2903,61 @@ class _OtraPantallaState extends State<OtraPantalla> {
   Widget build(BuildContext context) {
     final int tableRows = numberOfDies + 1;
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 160, 164, 167),  // Cambiar el color del fondo del header
-        centerTitle: true, 
-        toolbarHeight: 70,
-        title: Image.asset(
-          'assets/images/titulo5-logo.png',
-          height: 60,
-          fit: BoxFit.contain,
+    return WillPopScope(
+      onWillPop: () async {
+        final salir = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Before you go'),
+            content: const Text(
+              'If you leave, the draft will reset\nWe suggest exporting first.', style: TextStyle(fontSize: 16,)
+            ),
+            actions: [
+              OutlinedButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Return',style: TextStyle(fontSize: 16,)),
+              ),
+              OutlinedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Exit',style: TextStyle(fontSize: 16,)),
+              ),
+            ],
+          ),
+        );
+
+        return salir ?? false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: const Color.fromARGB(255, 160, 164, 167),
+          centerTitle: true,
+          toolbarHeight: 70,
+          title: Image.asset(
+            'assets/images/titulo5-logo.png',
+            height: 60,
+            fit: BoxFit.contain,
+          ),
         ),
-      ),
-      body: Column(
-        children: [
-          Container(
-            color: Color(0xFFF1F4F8), // Cambiar el color del fondo de la app
-            child: Padding(
-              padding: const EdgeInsets.all(6),
-              child: Column(
-                children: [
-                  if (errorMessage != null) // Mensaje de errror al momento de hacer los calculos
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4.0),
-                      child: Text(
-                        errorMessage!,
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
+        body: Column(
+          children: [
+            Container(
+              color: Color(0xFFF1F4F8),
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Column(
+                  children: [
+                      if (errorMessage != null) // Mensaje de errror al momento de hacer los calculos
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4.0),
+                          child: Text(
+                            errorMessage!,
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
 
                   // ===================== ROW 1 =====================
                   Row(
@@ -2780,7 +2998,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                               height: 28, 
                               child: TextField(
                                 controller: dateController,
-                                style: TextStyle(fontSize: 15),
+                                style: TextStyle(fontSize: 17,fontWeight: FontWeight.bold,),
                                 decoration: InputDecoration(
                                   filled: true,
                                   prefixIcon: Icon(Icons.calendar_today, size: 14),
@@ -2884,11 +3102,11 @@ class _OtraPantallaState extends State<OtraPantalla> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text("Final Speed ($selectedSpeedUnit)", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  Text("Speed ($selectedSpeedUnit)", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                                   
                                   TextField(
                                     controller: finalSpeedController,
-                                    style: TextStyle(fontSize: 15),
+                                    style: TextStyle(fontSize: 16),
                                     keyboardType: TextInputType.number,
                                     decoration: InputDecoration(
                                       border: OutlineInputBorder(),
@@ -2949,7 +3167,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                         ["# of Dies", diesController, () => updateDiesCount()],
                       ])
                         SizedBox(
-                          width: 150,
+                          width: 130,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -2959,7 +3177,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                               ),
                               TextField(
                                 controller: item[1] as TextEditingController,
-                                style: TextStyle(fontSize: 16),
+                                style: TextStyle(fontSize: 17),
                                 keyboardType: TextInputType.number,
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(),
@@ -2983,7 +3201,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
                       // Skin Pass
                       SizedBox(
-                        width: 150,
+                        width: 80,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -2996,7 +3214,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                 contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                               ),
                               items: ['Yes', 'No']
-                                  .map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyle(fontSize: 15))))
+                                  .map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyle(fontSize: 16))))
                                   .toList(),
                               onChanged: (value) {
                                 setState(() {
@@ -3015,7 +3233,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
                       if (isSkinPass)
                         SizedBox(
-                          width: 150,
+                          width: 100,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -3046,7 +3264,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
                       // Material
                       SizedBox(
-                        width: 300,
+                        width: 240,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -3064,7 +3282,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                 enviarDatosAlBackend();
                               },
                               items: materialOptions
-                                  .map((m) => DropdownMenuItem(value: m, child: Text(m, style: TextStyle(fontSize: 15))))
+                                  .map((m) => DropdownMenuItem(value: m, child: Text(m, style: TextStyle(fontSize: 16))))
                                   .toList(),
                             ),
                           ],
@@ -3074,7 +3292,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                       if (materialOptions.indexOf(selectedMaterial) == 7) ...[
                         // First Tensile
                         SizedBox(
-                          width: 150,
+                          width: 80,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -3102,7 +3320,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
                         // Last Tensile
                         SizedBox(
-                          width: 150,
+                          width: 80,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -3131,7 +3349,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
                       // Carbon
                       SizedBox(
-                        width: 150,
+                        width: 80,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -3148,7 +3366,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                 enviarDatosAlBackend();
                               },
                               items: filteredCarbonOptions
-                                  .map((c) => DropdownMenuItem(value: c, child: Text(c, style: TextStyle(fontSize: 15))))
+                                  .map((c) => DropdownMenuItem(value: c, child: Text(c, style: TextStyle(fontSize: 16))))
                                   .toList(),
                             ),
                           ],
@@ -3157,14 +3375,14 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
                       // Decimals
                       SizedBox(
-                        width: 150,
+                        width: 60,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text("Decimals", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             TextField(
                               controller: decimalsController,
-                              style: TextStyle(fontSize: 15),
+                              style: TextStyle(fontSize: 16),
                               keyboardType: TextInputType.number,
                               inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[2-4]$'))],
                               onChanged: (_) => updateDecimals(),
@@ -3222,7 +3440,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                             foregroundColor: showExtraTable ? Colors.white : Colors.black,
                                             side: BorderSide(color: const Color(0xFF58585a)),
                                           ),
-                                          child: Text("Part Numbers", style: TextStyle(fontSize: 15)),
+                                          child: Text("Part Numbers", style: TextStyle(fontSize: 16)),
                                           
                                         ),
 
@@ -3240,7 +3458,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                             foregroundColor: showPressureTable ?  Colors.white : Colors.black,
                                             side: BorderSide(color: const Color(0xFF58585a)),
                                           ),
-                                          child: Text("Pressure Table", style: TextStyle(fontSize: 15)),
+                                          child: Text("Pressure Table", style: TextStyle(fontSize: 16)),
                                         ),
 
                                         SizedBox(width: 8),
@@ -3261,7 +3479,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                             foregroundColor: usingStockDies ? Colors.white : Colors.black,
                                             side: const BorderSide(color: Color(0xFF58585a)),
                                           ),
-                                          child: const Text("Paramount Standard Dies", style: TextStyle(fontSize: 15)),
+                                          child: const Text("Paramount Standard Dies", style: TextStyle(fontSize: 16)),
                                         ),
 
                                         SizedBox(width: 8),
@@ -3279,7 +3497,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                             foregroundColor: !usingStockDies ? Colors.white : Colors.black,
                                             side: const BorderSide(color: Color(0xFF58585a)),
                                           ),
-                                          child: const Text("Regular Dies", style: TextStyle(fontSize: 15)),
+                                          child: const Text("Regular Dies", style: TextStyle(fontSize: 16)),
                                         ),
                                       ],
                                     ),
@@ -3354,26 +3572,29 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                         // Dropdown tipo de dado (String)
                                                         Padding(
                                                           padding: const EdgeInsets.all(4.0),
-                                                          child: DropdownButton<String>(
-                                                            value: (i - 1 < selectedDieTypes.length) 
-                                                                ? selectedDieTypes[i - 1] 
-                                                                : "TR4", // Valor por defecto si no existe
-                                                            isDense: true,
-                                                            underline: const SizedBox(),
-                                                            items: (() {
+                                                          child: Builder(
+                                                            builder: (context) {
                                                               if (i - 1 >= diameters.length) {
-                                                                return ["TR"].map((val) => DropdownMenuItem<String>(
-                                                                  value: val,
-                                                                  child: Text(val, style: const TextStyle(fontSize: 12)),
-                                                                )).toList();
+                                                                return DropdownButton<String>(
+                                                                  value: "TR",
+                                                                  isDense: true,
+                                                                  underline: const SizedBox(),
+                                                                  items: const [
+                                                                    DropdownMenuItem(
+                                                                      value: "TR",
+                                                                      child: Text("TR", style: TextStyle(fontSize: 12)),
+                                                                    ),
+                                                                  ],
+                                                                  onChanged: null,
+                                                                );
                                                               }
 
-                                                              final double diametro = diameters[i]; 
+                                                              final double diametro = diameters[i];
+
                                                               List<String> opciones;
 
-                                                              // RANGOS DE DIÁMETRO CONDICIONALES SEGÚN SISTEMA
+                                                              // ─── RANGOS SEGÚN SISTEMA ───
                                                               if (selectedSystem == 'metric') {
-                                                                // SISTEMA MÉTRICO (mm)
                                                                 if (diametro >= limInfTR4D && diametro < limInfTR4) {
                                                                   opciones = ["TR4D"];
                                                                 } else if (diametro >= limInfTR4 && diametro < limSupTR4D) {
@@ -3400,61 +3621,58 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                                   opciones = ["TR11"];
                                                                 }
                                                               } else {
-                                                                // SISTEMA IMPERIAL (pulgadas)
-                                                                if (diametro >= limInfTR4D && diametro < limInfTR4) {       
+                                                                if (diametro >= limInfTR4D && diametro < limInfTR4) {
                                                                   opciones = ["TR4D"];
-                                                                } else if (diametro >= limInfTR4 && diametro < limSupTR4D) { 
+                                                                } else if (diametro >= limInfTR4 && diametro < limSupTR4D) {
                                                                   opciones = ["TR4D", "TR4"];
-                                                                } else if (diametro >= limSupTR4D && diametro < limInfTR6) { 
+                                                                } else if (diametro >= limSupTR4D && diametro < limInfTR6) {
                                                                   opciones = ["TR4"];
-                                                                } else if (diametro >= limInfTR6 && diametro < limInfTR8) { 
+                                                                } else if (diametro >= limInfTR6 && diametro < limInfTR8) {
                                                                   opciones = ["TR4", "TR6"];
-                                                                } else if (diametro >= limInfTR8 && diametro < 0.1929) { 
+                                                                } else if (diametro >= limInfTR8 && diametro < 0.1929) {
                                                                   opciones = ["TR4", "TR6", "TR8"];
-                                                                } else if (diametro >= 0.1929 && diametro < limSupTR4) { 
+                                                                } else if (diametro >= 0.1929 && diametro < limSupTR4) {
                                                                   opciones = ["TR4", "TR6", "TR8", "T30"];
-                                                                } else if (diametro >= limSupTR4 && diametro < limSupTR6) { 
+                                                                } else if (diametro >= limSupTR4 && diametro < limSupTR6) {
                                                                   opciones = ["TR6", "TR8", "T30"];
-                                                                } else if (diametro >= limSupTR6 && diametro < 0.4961) { 
+                                                                } else if (diametro >= limSupTR6 && diametro < 0.4961) {
                                                                   opciones = ["TR8", "T30"];
-                                                                } else if (diametro >= 0.4961 && diametro < limSupTR8) { 
+                                                                } else if (diametro >= 0.4961 && diametro < limSupTR8) {
                                                                   opciones = ["TR8", "T30", "TR9"];
-                                                                } else if (diametro >= limSupTR8 && diametro < 0.6496) { 
+                                                                } else if (diametro >= limSupTR8 && diametro < 0.6496) {
                                                                   opciones = ["T30", "TR9"];
-                                                                } else if (diametro >= 0.6496 && diametro < 0.8858) { 
+                                                                } else if (diametro >= 0.6496 && diametro < 0.8858) {
                                                                   opciones = ["TR10"];
                                                                 } else {
                                                                   opciones = ["TR11"];
                                                                 }
                                                               }
 
-                                                              // Si el valor actual ya no está permitido para el nuevo diámetro, lo ajustamos
-                                                              if (!opciones.contains(selectedDieTypes[i - 1])) {
-                                                                WidgetsBinding.instance.addPostFrameCallback((_) {
-                                                                  setState(() {
-                                                                    selectedDieTypes[i - 1] = opciones.first;
-                                                                  });
-                                                                });
+                                                              String value = selectedDieTypes[i - 1] ?? opciones.first;
+                                                              if (!opciones.contains(value)) {
+                                                                value = opciones.first;
+                                                                selectedDieTypes[i - 1] = value;
                                                               }
 
-                                                              return opciones
-                                                                  .map((val) => DropdownMenuItem<String>(
-                                                                        value: val,
-                                                                        child: Text(
-                                                                          val,
-                                                                          style: const TextStyle(fontSize: 16),
-                                                                        ),
-                                                                      ))
-                                                                  .toList();
-                                                            })(),
-                                                            onChanged: (newValue) {
-                                                              setState(() {
-                                                                selectedDieTypes[i - 1] = newValue!;
-                                                              });
+                                                              return DropdownButton<String>(
+                                                                value: value,
+                                                                isDense: true,
+                                                                underline: const SizedBox(),
+                                                                items: opciones
+                                                                    .map((val) => DropdownMenuItem<String>(
+                                                                          value: val,
+                                                                          child: Text(val, style: const TextStyle(fontSize: 16)),
+                                                                        ))
+                                                                    .toList(),
+                                                                onChanged: (newValue) {
+                                                                  setState(() {
+                                                                    selectedDieTypes[i - 1] = newValue!;
+                                                                  });
+                                                                },
+                                                              );
                                                             },
                                                           ),
                                                         ),
-
 
                                                         // Columna "Part Number" 
                                                         Padding(
@@ -4243,17 +4461,17 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                                   children: [
                                                     ChoiceChip(
-                                                      label: Text("Temperature"),
+                                                      label: Text("Temperature", style: TextStyle(fontSize: 16,)),
                                                       selected: chartType == 0,
                                                       onSelected: (_) => setState(() => chartType = 0),
                                                     ),
                                                     ChoiceChip(
-                                                      label: Text("Delta"),
+                                                      label: Text("Delta", style: TextStyle(fontSize: 16,)),
                                                       selected: chartType == 1,
                                                       onSelected: (_) => setState(() => chartType = 1),
                                                     ),
                                                     ChoiceChip(
-                                                      label: Text("Reduction"),
+                                                      label: Text("Reduction", style: TextStyle(fontSize: 16,)),
                                                       selected: chartType == 2,
                                                       onSelected: (_) => setState(() => chartType = 2),
                                                     ),
@@ -4383,7 +4601,8 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                             setState(() {
                                                               selectedSystem = 'metric'; 
                                                             });
-                                                            _applyMetric(); 
+                                                            _applyMetric();
+                                                            loadRanges(selectedSystem); 
                                                           },
                                                         ),
                                                         ChoiceChip(
@@ -4393,7 +4612,8 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                             setState(() {
                                                               selectedSystem = 'imperial'; 
                                                             });
-                                                            _applyImperial(); 
+                                                            _applyImperial();
+                                                            loadRanges(selectedSystem); 
                                                           },
                                                         ),
                                                       ],
@@ -4676,7 +4896,8 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                             }
                                                           });
 
-                                                          enviarDatosAlBackend(); // Recalcular con nuevos valores
+                                                          enviarDatosAlBackend();
+                                                          loadRanges(selectedSystem); // Recalcular con nuevos valores
                                                           Navigator.of(context).pop();
                                                         },
                                                         
@@ -4798,14 +5019,14 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                       color: const Color.fromARGB(255, 56, 53, 53),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("Total",
-                                        style: TextStyle(fontSize: 16, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
                                       ),
                                     ),
                                     Container(
                                       color: const Color(0xFFe51937),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("${totalReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 16, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
                                       ),
                                     ),
                                   ],
@@ -4816,14 +5037,14 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                       color: const Color.fromARGB(255, 83, 79, 79),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("Average",
-                                        style: TextStyle(fontSize: 16, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
                                       ),
                                     ),
                                     Container(
                                       color: const Color.fromARGB(255, 221, 51, 77),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("${avgReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 16, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
                                       ),
                                     ),
                                   ],
@@ -4834,14 +5055,14 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                       color: const Color.fromARGB(255, 56, 53, 53),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("First",
-                                        style: TextStyle(fontSize: 16, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
                                       ),
                                     ),
                                     Container(
                                       color: const Color(0xFFe51937),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("${firstReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 16, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
                                       ),
                                     ),
                                   ],
@@ -4852,14 +5073,14 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                       color: const Color.fromARGB(255, 83, 79, 79),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("Last",
-                                        style: TextStyle(fontSize: 16, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
                                       ),
                                     ),
                                     Container(
                                       color: const Color.fromARGB(255, 221, 51, 77),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("${lastReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 16, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
                                       ),
                                     ),
                                   ],
@@ -4870,14 +5091,14 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                       color: const Color.fromARGB(255, 56, 53, 53),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("Maximum",
-                                        style: TextStyle(fontSize: 16, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
                                       ),
                                     ),
                                     Container(
                                       color: const Color(0xFFe51937),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("${maxReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 16, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
                                       ),
                                     ),
                                   ],
@@ -4888,14 +5109,14 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                       color: const Color.fromARGB(255, 83, 79, 79),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("Minimum",
-                                        style: TextStyle(fontSize: 16, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
                                       ),
                                     ),
                                     Container(
                                       color: const Color.fromARGB(255, 221, 51, 77),
                                       padding: const EdgeInsets.all(6.0),
                                       child: Text("${minReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 16, color: Colors.white),
+                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
                                       ),
                                     ),
                                   ],
@@ -4927,7 +5148,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                             backgroundColor: draftingType == 'Linear' ? const Color(0xFFe51937) : Colors.grey[300],
                             foregroundColor: draftingType == 'Linear' ? Colors.white : Colors.black,
                           ),
-                          child: Text("Linear"),
+                          child: Text("Linear", style: TextStyle(fontSize: 16,)),
                         ),
                         SizedBox(height: 8),
 
@@ -4955,12 +5176,12 @@ class _OtraPantallaState extends State<OtraPantalla> {
                             backgroundColor: draftingType == 'Full Taper' ? const Color(0xFFe51937) : Colors.grey[300],
                             foregroundColor: draftingType == 'Full Taper' ? Colors.white : Colors.black,
                           ),
-                          child: Text("Full Taper"),
+                          child: Text("Full Taper", style: TextStyle(fontSize: 16,)),
                         ),
                         
                         if (draftingType == 'Full Taper') ...[
                           SizedBox(height: 8),
-                          Text("Final Reduction Percentage (%)"),
+                          Text("Final Reduction Percentage (%)", style: TextStyle(fontSize: 15,)),
                           Row(
                             children: [
                               Expanded(
@@ -5041,7 +5262,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                   enviarDatosAlBackend();
                                 }
                               },
-                              child: Text("Update"),
+                              child: Text("Update", style: TextStyle(fontSize: 16,)),
                             ),
                           ],
 
@@ -5077,7 +5298,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                               foregroundColor:
                                   draftingType == 'Semi Taper' ? Colors.white : Colors.black,
                             ),
-                            child: Text("Semi Taper"),
+                            child: Text("Semi Taper", style: TextStyle(fontSize: 16,)),
                           ),
                         
                           if (semiActive) ...[
@@ -5099,11 +5320,11 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                           border: OutlineInputBorder(),
                                         ),
                                         onChanged: (value) {
-                                          final double? parseo = double.tryParse(value);
-                                          if (parseo != null && parseo >= 0) {
+                                          final double? loft = double.tryParse(value);
+                                          if (loft != null && loft >= 0) {
                                             setState(() {
-                                              maximumReductionPercentage = parseo;
-                                              sheets[currentSheetIndex].maximumReductionPercentage = parseo;
+                                              maximumReductionPercentage = loft;
+                                              sheets[currentSheetIndex].maximumReductionPercentage = loft;
                                             });
                                           }
                                         },
@@ -5130,7 +5351,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                             enviarDatosAlBackend();
                                           }
                                         },
-                                        child: Text("Update"),
+                                        child: Text("Update", style: TextStyle(fontSize: 16,)),
                                       ),
                                     ],
                                   ),
@@ -5158,7 +5379,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                               backgroundColor: draftingType == 'Optimized' ? const Color(0xFFe51937) : Colors.grey[300],
                               foregroundColor: draftingType == 'Optimized' ? Colors.white : Colors.black,
                             ),
-                            child: Text("Optimized"),
+                            child: Text("Optimized", style: TextStyle(fontSize: 16,)),
                           ),
                           Spacer(),
                           /* OutlinedButton.icon(
@@ -5188,7 +5409,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                               );
                             },
                             icon: Icon(Icons.visibility),
-                            label: Text("Preview PDF"),
+                            label: Text("Preview PDF", style: TextStyle(fontSize: 16,)),
                           )
                       ],
                     ),
@@ -5218,14 +5439,16 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
                       if (globalSelectedSystem == 'metric') {
                         selectedSystem = 'metric';
-                        decimalsdisplay = 2;
+                        decimalsdisplay = memoryDecimals;
+                        decimalsController.text = memoryDecimals.toString();
                         limitController.text = "120";
                         initialDiameterController.text = "5.5";
                         finalDiameterController.text = "2";
                         temperatureLimit = 120;
                       } else {
                         selectedSystem = 'imperial';
-                        decimalsdisplay = 3;
+                        decimalsdisplay = memoryDecimals;
+                        decimalsController.text = memoryDecimals.toString();
                         limitController.text = "210";
                         initialDiameterController.text = "0.218";
                         finalDiameterController.text = "0.080";
@@ -5236,11 +5459,17 @@ class _OtraPantallaState extends State<OtraPantalla> {
                       diametersModified = List.filled(manualDiameters.length, false);
                       anglesModified = List.filled(manualAngles.length, false);
 
+                      if (dateController.text.isEmpty) {
+                        DateTime hoy = DateTime.now();
+                        String rajang = DateFormat('yyyy-MMM-dd').format(hoy);
+                        dateController.text = rajang;
+                      }
+
                       enviarDatosAlBackend();
                     });
                   },
                   style: TextButton.styleFrom(foregroundColor: Colors.white),
-                  child: const Text("+ Add Sheet"),
+                  child: const Text("+ Add Sheet", style: TextStyle(fontSize: 16,)),
                 ),
 
                 // Botones de cada hoja
@@ -5251,7 +5480,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                       onDoubleTap: () {
                         setState(() {
                           editingSheetIndex = i;
-                          renameController.text = sheets[i].name.isEmpty
+                          johnStunlock.text = sheets[i].name.isEmpty
                               ? "Sheet ${i + 1}"
                               : sheets[i].name;
                         });
@@ -5265,7 +5494,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: TextField(
-                                controller: renameController,
+                                controller: johnStunlock,
                                 autofocus: true,
                                 style: const TextStyle(color: Colors.white),
                                 onSubmitted: (value) {
@@ -5277,9 +5506,9 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                 },
                                 onTapOutside: (_) {
                                   setState(() {
-                                    sheets[i].name = renameController.text.trim().isEmpty
+                                    sheets[i].name = johnStunlock.text.trim().isEmpty
                                         ? "Sheet ${i + 1}"
-                                        : renameController.text;
+                                        : johnStunlock.text;
                                     editingSheetIndex = null;
                                   });
                                 },
@@ -5327,13 +5556,14 @@ class _OtraPantallaState extends State<OtraPantalla> {
                     });
                   },
                   style: TextButton.styleFrom(foregroundColor: Colors.white),
-                  child: const Text("- Close Sheet"),
+                  child: const Text("- Close Sheet", style: TextStyle(fontSize: 16,)),
                 ),
               ],
             ),
           ),
         ],
       ),
+    )
     );
   }
 }

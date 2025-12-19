@@ -2860,17 +2860,17 @@ Widget _buildControls() {
         runSpacing: 8,
         children: [
           if (!_compare)
-            ElevatedButton(
+            OutlinedButton(
               onPressed: (_usePart && !_partFound) ? null : _buildDie,
-              child: const Text('Build Die'),
+              child: const Text('Build Die', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
             ),
-          ElevatedButton(
+          OutlinedButton(
             onPressed: () => setState(() => _showConstruction = !_showConstruction),
-            child: Text(_showConstruction ? 'Hide Construction' : 'Show Construction'),
+            child: Text(_showConstruction ? 'Hide Construction' : 'Show Construction', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
           ),
-          ElevatedButton(
+          OutlinedButton(
             onPressed: () => setState(() => _compare = !_compare),
-            child: Text(_compare ? 'Hide Comparison' : 'Compare Die'),
+            child: Text(_compare ? 'Hide Comparison' : 'Compare Die', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
           ),
         ],
       ),
