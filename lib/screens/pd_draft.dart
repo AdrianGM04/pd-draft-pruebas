@@ -52,7 +52,7 @@ class PdfPreviewScreen extends StatelessWidget {
 // Se inicializan todas las variables, listas, arrays, y controladores de texto para que la app funcione
 class _OtraPantallaState extends State<OtraPantalla> {
   double zoomLevel = 1; // 1.0 = normal, >1 agranda, <1 reduce
-  
+  late final ScrollController _rightPanelCtrl;
   final TextEditingController diesController = TextEditingController();
   final TextEditingController initialDiameterController = TextEditingController();
   final TextEditingController finalDiameterController = TextEditingController();
@@ -249,6 +249,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
   @override
   void initState() {
     super.initState();
+    _rightPanelCtrl = ScrollController();
     limitController.text = temperatureLimit.toString();
     finalReductionPercentage = sheets[0].finalReductionPercentage;
     maximumReductionPercentage = sheets[0].maximumReductionPercentage;
@@ -276,6 +277,12 @@ class _OtraPantallaState extends State<OtraPantalla> {
       loadRanges(selectedSystem);
     });
     loadSheetData(0);
+  }
+
+  @override
+  void dispose() {
+    _rightPanelCtrl.dispose();
+    super.dispose();
   }
 
   // Funcion que actualiza el valor de "# Dies"
@@ -928,17 +935,32 @@ class _OtraPantallaState extends State<OtraPantalla> {
     // Preparamos datos
     final tableData = List.generate(
       diametros.length,
-      (i) => [
-        i == 0 ? '-' : ('$i'),
-        diametros[i].toStringAsFixed(decimalsdisplay),
-        i == 0 ? '-' : (i < reductions.length ? reductions[i].toStringAsFixed(1) : '-'),
-        i == 0 ? '-' : (i < deltas.length ? deltas[i].toStringAsFixed(2) : '-'),
-        i == 0 ? '-' : (i < angles.length ? angles[i].toStringAsFixed(0) : '-'),
-        i < tensiles.length ? tensiles[i].toStringAsFixed(0) : '-',
-        i == 0 ? '-' : (i < temperatures.length ? temperatures[i].toStringAsFixed(0) : '-'),
-        i < speeds.length ? speeds[i].toStringAsFixed(2) : '-',
-        i < pressureDieValues.length ? pressureDieValues[i].toString() : '-',
-      ].map((e) => e.toString()).toList(),
+      (i) {
+        String pressDies = '-';
+
+        if (i != 0 && i < pressureDieValues.length && i < diametros.length) {
+          final pressureVal = double.tryParse(
+            pressureDieValues[i].toString().replaceAll('%', '').trim(),
+          ) ?? 0.0;
+
+          final rounded = _pressureDieSizeRounded(i, diametros) ?? 0.0;
+
+          pressDies =
+              '${rounded.toStringAsFixed(decimalsdisplay)} (${pressureVal.toStringAsFixed(0)}%)';
+        }
+
+        return [
+          i == 0 ? '-' : ('$i'),
+          diametros[i].toStringAsFixed(decimalsdisplay),
+          i == 0 ? '-' : (i < reductions.length ? reductions[i].toStringAsFixed(1) : '-'),
+          i == 0 ? '-' : (i < deltas.length ? deltas[i].toStringAsFixed(2) : '-'),
+          i == 0 ? '-' : (i < angles.length ? angles[i].toStringAsFixed(0) : '-'),
+          i < tensiles.length ? tensiles[i].toStringAsFixed(0) : '-',
+          i == 0 ? '-' : (i < temperatures.length ? temperatures[i].toStringAsFixed(0) : '-'),
+          i < speeds.length ? speeds[i].toStringAsFixed(2) : '-',
+          pressDies,
+        ].map((e) => e.toString()).toList();
+      },
     );
 
     final partNumberData = List.generate(diametros.length - 1, (index) {
@@ -946,8 +968,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
       final angle = angles[n];
       final diameter = diametros[n];
 
-      final pressureValue = double.tryParse(pressureDieValues[n].toString()) ?? 0.0;
-      final diameterpressure = diametros[n - 1] * (1 + pressureValue * 0.01);
+      final diameterpressure = _pressureDieSizeRounded(n, diametros) ?? 0.0;
 
       final prefix = selectedDieTypes.length > index && selectedDieTypes[index] != null
           ? selectedDieTypes[index]!
@@ -1243,19 +1264,18 @@ class _OtraPantallaState extends State<OtraPantalla> {
       (i) {
         String pressureDisplay;
 
-        if (i < pressureDieValues.length && i < diametros.length && i != 0) {
-          final pressureVal = pressureDieValues[i] is String
-              ? double.tryParse(pressureDieValues[i]) ?? 0.0
-              : (pressureDieValues[i] ?? 0.0);
+      if (i < pressureDieValues.length && i < diametros.length && i != 0) {
+        final pressureVal = double.tryParse(
+          pressureDieValues[i].toString().replaceAll('%', '').trim(),
+        ) ?? 0.0;
 
-          // Multiplicación: diámetro * presión
-          final multiplied = diametros[i-1] + diametros[i-1] * (pressureVal * 0.01);
+        final rounded = _pressureDieSizeRounded(i, diametros) ?? 0.0;
 
-          pressureDisplay =
-              '${multiplied.toStringAsFixed(decimalsdisplay)} (${pressureVal.toStringAsFixed(0)}%)';
-        } else {
-          pressureDisplay = '-';
-        }
+        pressureDisplay =
+            '${rounded.toStringAsFixed(decimalsdisplay)} (${pressureVal.toStringAsFixed(0)}%)';
+      } else {
+        pressureDisplay = '-';
+      }
 
         return [
           i == 0 ? '-' : ('$i'),
@@ -1294,8 +1314,8 @@ class _OtraPantallaState extends State<OtraPantalla> {
       final angle = angles[n];
       final diameter = diametros[n];
 
-      final pressureValue = double.tryParse(pressureDieValues[n].toString()) ?? 0.0;
-      final diameterpressure = diametros[n - 1] * (1 + pressureValue * 0.01);
+      final diameterpressure = _pressureDieSizeRounded(n, diametros) ?? 0.0;
+
 
       final prefix = selectedDieTypes.length > index && selectedDieTypes[index] != null
           ? selectedDieTypes[index]!
@@ -1767,6 +1787,86 @@ class _OtraPantallaState extends State<OtraPantalla> {
     
     return resultado;
   }
+
+// --- Paramount Standard Pressure Die rounding helpers ---
+
+double _asDouble(dynamic x) {
+  if (x == null) return double.nan;
+  if (x is num) return x.toDouble();
+  return double.tryParse(x.toString()) ?? double.nan;
+}
+
+double _roundUpToMultiple(double value, double step) {
+  if (step <= 0) return value;
+
+  final q = value / step;
+
+  // Si ya es múltiplo (tolerancia por floats), se queda igual.
+  final isMultiple = (q - q.roundToDouble()).abs() < 1e-9;
+  if (isMultiple) return value;
+
+  return q.ceilToDouble() * step;
+}
+
+/// Decide el "step" basado en el PRIMER Pressure Die (die #1).
+/// Reglas (en mm):
+///  - 1.00–2.54 => step 0.02
+///  - 2.55–6.05 => step 0.05
+double? _paramountPressureStepMm(List<dynamic> diametros) {
+  if (!usingStockDies) return null;
+
+  if (diametros.length < 2) return null;
+  if (pressureDieValues.length < 2) return null;
+
+  // Parse robusto (por si trae espacios o %)
+  final p1 = double.tryParse(
+    pressureDieValues[1].toString().replaceAll('%', '').trim(),
+  );
+  if (p1 == null) return null;
+
+  final incoming = _asDouble(diametros[0]);
+  if (incoming.isNaN) return null;
+
+  final rawFirst = incoming * (1.0 + p1 / 100.0);
+
+  // Reglas en mm
+  final firstMm = (selectedSystem == "imperial") ? rawFirst * 25.4 : rawFirst;
+
+  const eps = 1e-9; // <- CLAVE para que 6.050000000000001 cuente como 6.05
+
+  if (firstMm >= 1.00 - eps && firstMm <= 2.54 + eps) return 0.02;
+  if (firstMm >= 2.55 - eps && firstMm <= 6.05 + eps) return 0.05;
+
+  return null;
+}
+
+double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
+  if (index <= 0) return null;
+  if (index >= diametros.length) return null;
+  if (index >= pressureDieValues.length) return null;
+
+  final p = double.tryParse(pressureDieValues[index].toString());
+  if (p == null) return null;
+
+  final prev = _asDouble(diametros[index - 1]);
+  if (prev.isNaN) return null;
+
+  // Cálculo original (igual que hoy)
+  final raw = prev * (1.0 + p / 100.0);
+
+  final stepMm = _paramountPressureStepMm(diametros);
+  if (stepMm == null) return raw;
+
+  // Aplicar redondeo en mm (aunque estés mostrando imperial)
+  if (selectedSystem == "imperial") {
+    final rawMm = raw * 25.4;
+    final roundedMm = _roundUpToMultiple(rawMm, stepMm);
+    return roundedMm / 25.4;
+  } else {
+    return _roundUpToMultiple(raw, stepMm);
+  }
+}
+
 
   // Exportar CSV 
   Future<void> exportSheetsToCSV(List<SheetData> sheets) async {
@@ -4353,13 +4453,10 @@ class _OtraPantallaState extends State<OtraPantalla> {
                                                             index >= diameters.length ||
                                                             index >= pressureDieValues.length) return "-";
 
-                                                        final previousDiameter = diameters[index - 1];
-                                                        final pressureValue = double.tryParse(pressureDieValues[index] ?? "");
+                                                        final v = _pressureDieSizeRounded(index, diameters);
+                                                        if (v == null) return "-";
 
-                                                        if (pressureValue == null) return "-";
-
-                                                        final result = previousDiameter * (1 + pressureValue / 100);
-                                                        return result.toStringAsFixed(decimalsdisplay);
+                                                        return v.toStringAsFixed(decimalsdisplay);
                                                       })(),
                                                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                                                     ),
@@ -4986,432 +5083,543 @@ class _OtraPantallaState extends State<OtraPantalla> {
                 Expanded(
                   flex: 6,
                   child: Container(
-                    padding: EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(12),
                     color: const Color(0xFFF5F5F5),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Center(
-                              child: Text(
-                                "Area Reductions",
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                            Table(
-                              columnWidths: const {
-                                0: FlexColumnWidth(2),
-                                1: FlexColumnWidth(1),
-                              },
-                              border: TableBorder.all(color: const Color.fromARGB(255, 0, 0, 0), width: 1),
-                              children: [
-                                TableRow(
-                                  children: [
-                                    Container(
-                                      color: const Color.fromARGB(255, 56, 53, 53),
-                                      padding: const EdgeInsets.all(6.0),
-                                      child: Text("Total",
-                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
-                                      ),
-                                    ),
-                                    Container(
-                                      color: const Color(0xFFe51937),
-                                      padding: const EdgeInsets.all(6.0),
-                                      child: Text("${totalReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                TableRow(
-                                  children: [
-                                    Container(
-                                      color: const Color.fromARGB(255, 83, 79, 79),
-                                      padding: const EdgeInsets.all(6.0),
-                                      child: Text("Average",
-                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
-                                      ),
-                                    ),
-                                    Container(
-                                      color: const Color.fromARGB(255, 221, 51, 77),
-                                      padding: const EdgeInsets.all(6.0),
-                                      child: Text("${avgReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                TableRow(
-                                  children: [
-                                    Container(
-                                      color: const Color.fromARGB(255, 56, 53, 53),
-                                      padding: const EdgeInsets.all(6.0),
-                                      child: Text("First",
-                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
-                                      ),
-                                    ),
-                                    Container(
-                                      color: const Color(0xFFe51937),
-                                      padding: const EdgeInsets.all(6.0),
-                                      child: Text("${firstReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                TableRow(
-                                  children: [
-                                    Container(
-                                      color: const Color.fromARGB(255, 83, 79, 79),
-                                      padding: const EdgeInsets.all(6.0),
-                                      child: Text("Last",
-                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
-                                      ),
-                                    ),
-                                    Container(
-                                      color: const Color.fromARGB(255, 221, 51, 77),
-                                      padding: const EdgeInsets.all(6.0),
-                                      child: Text("${lastReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                TableRow(
-                                  children: [
-                                    Container(
-                                      color: const Color.fromARGB(255, 56, 53, 53),
-                                      padding: const EdgeInsets.all(6.0),
-                                      child: Text("Maximum",
-                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
-                                      ),
-                                    ),
-                                    Container(
-                                      color: const Color(0xFFe51937),
-                                      padding: const EdgeInsets.all(6.0),
-                                      child: Text("${maxReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                TableRow(
-                                  children: [
-                                    Container(
-                                      color: const Color.fromARGB(255, 83, 79, 79),
-                                      padding: const EdgeInsets.all(6.0),
-                                      child: Text("Minimum",
-                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
-                                      ),
-                                    ),
-                                    Container(
-                                      color: const Color.fromARGB(255, 221, 51, 77),
-                                      padding: const EdgeInsets.all(6.0),
-                                      child: Text("${minReduction.toStringAsFixed(1)}%",
-                                        style: TextStyle(fontSize: 16, color: Colors.white,fontWeight: FontWeight.bold,),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-
-                            SizedBox(height: 16),
-                          ],
-                        ),
-
-                        SizedBox(height: 16),
-
-                        // Botón Linear
-                        OutlinedButton(
-                          onPressed: () {
-                            setState(() {
-                              draftingType = 'Linear';
-                              sheets[currentSheetIndex].draftingType = draftingType;
-                              isManual = false;
-                              isManualAngle = false;
-                              semiActive = false;
-                              diametersModified = List.filled(manualDiameters.length, false);
-                              anglesModified = List.filled(manualAngles.length, false);
-                              enviarDatosAlBackend();
-                            });
-                          },
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: draftingType == 'Linear' ? const Color(0xFFe51937) : Colors.grey[300],
-                            foregroundColor: draftingType == 'Linear' ? Colors.white : Colors.black,
-                          ),
-                          child: Text("Linear", style: TextStyle(fontSize: 16,)),
-                        ),
-                        SizedBox(height: 8),
-
-                        // Botón Full Taper
-                        OutlinedButton(
-                          onPressed: () {
-                            setState(() {
-                              draftingType = 'Full Taper';
-                              sheets[currentSheetIndex].draftingType = draftingType;
-
-                              if (taperPercentageController.text.isEmpty) {
-                                taperPercentageController.text = '15';
-                                sheets[currentSheetIndex].finalReductionPercentage = 15;
-                                finalReductionPercentage = 15;
-                              }
-                              isManual = false;
-                              isManualAngle = false;
-                              semiActive = false;
-                              diametersModified = List.filled(manualDiameters.length, false);
-                              anglesModified = List.filled(manualAngles.length, false);
-                              enviarDatosAlBackend();
-                            });
-                          },
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: draftingType == 'Full Taper' ? const Color(0xFFe51937) : Colors.grey[300],
-                            foregroundColor: draftingType == 'Full Taper' ? Colors.white : Colors.black,
-                          ),
-                          child: Text("Full Taper", style: TextStyle(fontSize: 16,)),
-                        ),
-                        
-                        if (draftingType == 'Full Taper') ...[
-                          SizedBox(height: 8),
-                          Text("Final Reduction Percentage (%)", style: TextStyle(fontSize: 15,)),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: taperPercentageController,
-                                  keyboardType: TextInputType.number,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(),
-                                    hintText: esperandoRespuesta ? 'Loading...' : null,
-                                  ),
-                                  onChanged: (value) {
-                                    final double? parsed = double.tryParse(value);
-                                    if (parsed != null && parsed >= 0) {
-                                      setState(() {
-                                        finalReductionPercentage = parsed;
-                                        sheets[currentSheetIndex].finalReductionPercentage = parsed;
-                                      });
-                                    }
-                                  },
-                                ),
-                              ),
-                              SizedBox(width: 8),
-                              Column(
-                                mainAxisSize: MainAxisSize.min,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return Scrollbar(
+                          controller: _rightPanelCtrl,
+                          thumbVisibility: true,
+                          child: SingleChildScrollView(
+                            controller: _rightPanelCtrl,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 70),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  SizedBox(
-                                    width: 32,
-                                    height: 24,
-                                    child: OutlinedButton(
-                                      style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
-                                      onPressed: () {
-                                        setState(() {
-                                          double value = double.tryParse(taperPercentageController.text) ?? 0;
-                                          value += 0.1;
-                                          value = double.parse(value.toStringAsFixed(2));
-                                          taperPercentageController.text = value.toString();
-                                          finalReductionPercentage = value;
-                                          sheets[currentSheetIndex].finalReductionPercentage = value;
-                                        });
-                                        enviarDatosAlBackend();
-                                      },
-                                      child: Icon(Icons.arrow_drop_up, size: 16),
-                                    ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Center(
+                                        child: Text(
+                                          "Area Reductions",
+                                          style: TextStyle(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                      SizedBox(height: 8),
+                                      Table(
+                                        columnWidths: const {
+                                          0: FlexColumnWidth(2),
+                                          1: FlexColumnWidth(1),
+                                        },
+                                        border: TableBorder.all(
+                                          color: const Color.fromARGB(255, 0, 0, 0),
+                                          width: 1,
+                                        ),
+                                        children: [
+                                          TableRow(
+                                            children: [
+                                              Container(
+                                                color: const Color.fromARGB(255, 56, 53, 53),
+                                                padding: const EdgeInsets.all(6.0),
+                                                child: Text(
+                                                  "Total",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              Container(
+                                                color: const Color(0xFFe51937),
+                                                padding: const EdgeInsets.all(6.0),
+                                                child: Text(
+                                                  "${totalReduction.toStringAsFixed(1)}%",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          TableRow(
+                                            children: [
+                                              Container(
+                                                color: const Color.fromARGB(255, 83, 79, 79),
+                                                padding: const EdgeInsets.all(6.0),
+                                                child: Text(
+                                                  "Average",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              Container(
+                                                color: const Color.fromARGB(255, 221, 51, 77),
+                                                padding: const EdgeInsets.all(6.0),
+                                                child: Text(
+                                                  "${avgReduction.toStringAsFixed(1)}%",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          TableRow(
+                                            children: [
+                                              Container(
+                                                color: const Color.fromARGB(255, 56, 53, 53),
+                                                padding: const EdgeInsets.all(6.0),
+                                                child: Text(
+                                                  "First",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              Container(
+                                                color: const Color(0xFFe51937),
+                                                padding: const EdgeInsets.all(6.0),
+                                                child: Text(
+                                                  "${firstReduction.toStringAsFixed(1)}%",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          TableRow(
+                                            children: [
+                                              Container(
+                                                color: const Color.fromARGB(255, 83, 79, 79),
+                                                padding: const EdgeInsets.all(6.0),
+                                                child: Text(
+                                                  "Last",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              Container(
+                                                color: const Color.fromARGB(255, 221, 51, 77),
+                                                padding: const EdgeInsets.all(6.0),
+                                                child: Text(
+                                                  "${lastReduction.toStringAsFixed(1)}%",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          TableRow(
+                                            children: [
+                                              Container(
+                                                color: const Color.fromARGB(255, 56, 53, 53),
+                                                padding: const EdgeInsets.all(6.0),
+                                                child: Text(
+                                                  "Maximum",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              Container(
+                                                color: const Color(0xFFe51937),
+                                                padding: const EdgeInsets.all(6.0),
+                                                child: Text(
+                                                  "${maxReduction.toStringAsFixed(1)}%",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          TableRow(
+                                            children: [
+                                              Container(
+                                                color: const Color.fromARGB(255, 83, 79, 79),
+                                                padding: const EdgeInsets.all(6.0),
+                                                child: Text(
+                                                  "Minimum",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              Container(
+                                                color: const Color.fromARGB(255, 221, 51, 77),
+                                                padding: const EdgeInsets.all(6.0),
+                                                child: Text(
+                                                  "${minReduction.toStringAsFixed(1)}%",
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 16),
+                                    ],
                                   ),
-                                  SizedBox(
-                                    width: 32,
-                                    height: 24,
-                                    child: OutlinedButton(
-                                      style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
-                                      onPressed: () {
-                                        setState(() {
-                                          double value = double.tryParse(taperPercentageController.text) ?? 0;
-                                          value -= 0.1;
-                                          if (value < 0) value = 0;
-                                          value = double.parse(value.toStringAsFixed(2));
-                                          taperPercentageController.text = value.toString();
-                                          finalReductionPercentage = value;
-                                          sheets[currentSheetIndex].finalReductionPercentage = value;
-                                        });
+
+                                  SizedBox(height: 16),
+
+                                  // Botón Linear
+                                  OutlinedButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        draftingType = 'Linear';
+                                        sheets[currentSheetIndex].draftingType = draftingType;
+                                        isManual = false;
+                                        isManualAngle = false;
+                                        semiActive = false;
+                                        diametersModified =
+                                            List.filled(manualDiameters.length, false);
+                                        anglesModified = List.filled(manualAngles.length, false);
                                         enviarDatosAlBackend();
-                                      },
-                                      child: Icon(Icons.arrow_drop_down, size: 16),
+                                      });
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor: draftingType == 'Linear'
+                                          ? const Color(0xFFe51937)
+                                          : Colors.grey[300],
+                                      foregroundColor: draftingType == 'Linear'
+                                          ? Colors.white
+                                          : Colors.black,
                                     ),
+                                    child: Text("Linear", style: TextStyle(fontSize: 16)),
+                                  ),
+                                  SizedBox(height: 8),
+
+                                  // Botón Full Taper
+                                  OutlinedButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        draftingType = 'Full Taper';
+                                        sheets[currentSheetIndex].draftingType = draftingType;
+
+                                        if (taperPercentageController.text.isEmpty) {
+                                          taperPercentageController.text = '15';
+                                          sheets[currentSheetIndex].finalReductionPercentage = 15;
+                                          finalReductionPercentage = 15;
+                                        }
+                                        isManual = false;
+                                        isManualAngle = false;
+                                        semiActive = false;
+                                        diametersModified =
+                                            List.filled(manualDiameters.length, false);
+                                        anglesModified = List.filled(manualAngles.length, false);
+                                        enviarDatosAlBackend();
+                                      });
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor: draftingType == 'Full Taper'
+                                          ? const Color(0xFFe51937)
+                                          : Colors.grey[300],
+                                      foregroundColor: draftingType == 'Full Taper'
+                                          ? Colors.white
+                                          : Colors.black,
+                                    ),
+                                    child: Text("Full Taper", style: TextStyle(fontSize: 16)),
+                                  ),
+
+                                  if (draftingType == 'Full Taper') ...[
+                                    SizedBox(height: 8),
+                                    Text("Final Reduction Percentage (%)",
+                                        style: TextStyle(fontSize: 15)),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: TextField(
+                                            controller: taperPercentageController,
+                                            keyboardType: TextInputType.number,
+                                            decoration: InputDecoration(
+                                              border: OutlineInputBorder(),
+                                              hintText: esperandoRespuesta ? 'Loading...' : null,
+                                            ),
+                                            onChanged: (value) {
+                                              final double? parsed = double.tryParse(value);
+                                              if (parsed != null && parsed >= 0) {
+                                                setState(() {
+                                                  finalReductionPercentage = parsed;
+                                                  sheets[currentSheetIndex]
+                                                      .finalReductionPercentage = parsed;
+                                                });
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                        SizedBox(width: 8),
+                                        Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            SizedBox(
+                                              width: 32,
+                                              height: 24,
+                                              child: OutlinedButton(
+                                                style: OutlinedButton.styleFrom(
+                                                    padding: EdgeInsets.zero),
+                                                onPressed: () {
+                                                  setState(() {
+                                                    double value = double.tryParse(
+                                                            taperPercentageController.text) ??
+                                                        0;
+                                                    value += 0.1;
+                                                    value =
+                                                        double.parse(value.toStringAsFixed(2));
+                                                    taperPercentageController.text =
+                                                        value.toString();
+                                                    finalReductionPercentage = value;
+                                                    sheets[currentSheetIndex]
+                                                        .finalReductionPercentage = value;
+                                                  });
+                                                  enviarDatosAlBackend();
+                                                },
+                                                child:
+                                                    Icon(Icons.arrow_drop_up, size: 16),
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              width: 32,
+                                              height: 24,
+                                              child: OutlinedButton(
+                                                style: OutlinedButton.styleFrom(
+                                                    padding: EdgeInsets.zero),
+                                                onPressed: () {
+                                                  setState(() {
+                                                    double value = double.tryParse(
+                                                            taperPercentageController.text) ??
+                                                        0;
+                                                    value -= 0.1;
+                                                    if (value < 0) value = 0;
+                                                    value =
+                                                        double.parse(value.toStringAsFixed(2));
+                                                    taperPercentageController.text =
+                                                        value.toString();
+                                                    finalReductionPercentage = value;
+                                                    sheets[currentSheetIndex]
+                                                        .finalReductionPercentage = value;
+                                                  });
+                                                  enviarDatosAlBackend();
+                                                },
+                                                child:
+                                                    Icon(Icons.arrow_drop_down, size: 16),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 8),
+                                    OutlinedButton(
+                                      onPressed: () {
+                                        final double? parsed = double.tryParse(
+                                            taperPercentageController.text);
+                                        if (parsed != null && parsed >= 0) {
+                                          setState(() {
+                                            finalReductionPercentage = parsed;
+                                            sheets[currentSheetIndex]
+                                                .finalReductionPercentage = parsed;
+                                          });
+                                          enviarDatosAlBackend();
+                                        }
+                                      },
+                                      child: Text("Update", style: TextStyle(fontSize: 16)),
+                                    ),
+                                  ],
+
+                                  SizedBox(height: 8),
+
+                                  // Botón Semi Taper
+                                  OutlinedButton(
+                                    onPressed: (draftingType == 'Linear' ||
+                                            draftingType == 'Optimized')
+                                        ? null
+                                        : () {
+                                            setState(() {
+                                              semiActive = true;
+                                              sheets[currentSheetIndex].draftingType =
+                                                  draftingType;
+
+                                              if (semitaperPercentageController
+                                                  .text.isEmpty) {
+                                                semitaperPercentageController.text = '25';
+                                                sheets[currentSheetIndex]
+                                                    .maximumReductionPercentage = 25;
+                                                maximumReductionPercentage = 25;
+                                              }
+
+                                              isManual = false;
+                                              isManualAngle = false;
+                                              diametersModified =
+                                                  List.filled(manualDiameters.length, false);
+                                              anglesModified =
+                                                  List.filled(manualAngles.length, false);
+                                              isSkinPass = false;
+                                              enviarDatosAlBackend();
+                                            });
+                                          },
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor: draftingType == 'Semi Taper'
+                                          ? const Color(0xFFe51937)
+                                          : Colors.grey[300],
+                                      foregroundColor: draftingType == 'Semi Taper'
+                                          ? Colors.white
+                                          : Colors.black,
+                                    ),
+                                    child: Text("Semi Taper", style: TextStyle(fontSize: 16)),
+                                  ),
+
+                                  if (semiActive) ...[
+                                    SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        SizedBox(width: 8),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text("Max Reduction %"),
+                                              SizedBox(height: 4),
+                                              TextField(
+                                                controller: semitaperPercentageController,
+                                                keyboardType: TextInputType.number,
+                                                decoration: InputDecoration(
+                                                  border: OutlineInputBorder(),
+                                                ),
+                                                onChanged: (value) {
+                                                  final double? loft =
+                                                      double.tryParse(value);
+                                                  if (loft != null && loft >= 0) {
+                                                    setState(() {
+                                                      maximumReductionPercentage = loft;
+                                                      sheets[currentSheetIndex]
+                                                          .maximumReductionPercentage = loft;
+                                                    });
+                                                  }
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        SizedBox(width: 8),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              SizedBox(height: 20),
+                                              OutlinedButton(
+                                                onPressed: () {
+                                                  final double? parsed = double.tryParse(
+                                                      semitaperPercentageController.text);
+                                                  if (parsed != null && parsed >= 0) {
+                                                    setState(() {
+                                                      draftingType = 'Semi Taper';
+                                                      maximumReductionPercentage = parsed;
+                                                      sheets[currentSheetIndex]
+                                                          .finalReductionPercentage = parsed;
+                                                    });
+                                                    enviarDatosAlBackend();
+                                                  }
+                                                },
+                                                child: Text("Update",
+                                                    style: TextStyle(fontSize: 16)),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 8),
+                                  ],
+
+                                  SizedBox(height: 8),
+
+                                  OutlinedButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        draftingType = 'Optimized';
+                                        sheets[currentSheetIndex].draftingType = draftingType;
+                                        isManual = false;
+                                        isManualAngle = false;
+                                        semiActive = false;
+                                        diametersModified =
+                                            List.filled(manualDiameters.length, false);
+                                        anglesModified = List.filled(manualAngles.length, false);
+                                        enviarDatosAlBackend();
+                                      });
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor: draftingType == 'Optimized'
+                                          ? const Color(0xFFe51937)
+                                          : Colors.grey[300],
+                                      foregroundColor: draftingType == 'Optimized'
+                                          ? Colors.white
+                                          : Colors.black,
+                                    ),
+                                    child: Text("Optimized", style: TextStyle(fontSize: 16)),
+                                  ),
+
+                                  // ❌ NO uses Spacer() en scroll. Usa espacio fijo.
+                                  SizedBox(height: 16),
+
+                                  SizedBox(height: 4),
+
+                                  OutlinedButton.icon(
+                                    onPressed: () async {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => PdfPreviewScreen(
+                                            buildPdf: () =>
+                                                generarPDFBytes(manualDiameters, reductions),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    icon: Icon(Icons.visibility),
+                                    label: Text("Preview PDF", style: TextStyle(fontSize: 16)),
                                   ),
                                 ],
                               ),
-                            ],
+                            ),
                           ),
-                          SizedBox(height: 8),
-                          OutlinedButton(
-                              onPressed: () {
-                                final double? parsed = double.tryParse(taperPercentageController.text);
-                                if (parsed != null && parsed >= 0) {
-                                  setState(() {
-                                    finalReductionPercentage = parsed;
-                                    sheets[currentSheetIndex].finalReductionPercentage = parsed;
-                                  });
-                                  enviarDatosAlBackend();
-                                }
-                              },
-                              child: Text("Update", style: TextStyle(fontSize: 16,)),
-                            ),
-                          ],
-
-                          SizedBox(height: 8),
-
-                          // Botón Semi Taper
-                          OutlinedButton(
-                            onPressed: (draftingType == 'Linear' || draftingType == 'Optimized')
-                                ? null
-                                : () {
-                                    setState(() {
-                                      semiActive = true;
-                                      sheets[currentSheetIndex].draftingType = draftingType;
-
-                                      if (semitaperPercentageController.text.isEmpty) {
-                                        semitaperPercentageController.text = '25';
-                                        sheets[currentSheetIndex].maximumReductionPercentage = 25;
-                                        maximumReductionPercentage = 25;
-                                      }
-
-                                      isManual = false;
-                                      isManualAngle = false;
-                                      diametersModified = List.filled(manualDiameters.length, false);
-                                      anglesModified = List.filled(manualAngles.length, false);
-                                      isSkinPass = false;
-                                      enviarDatosAlBackend();
-                                    });
-                                  },
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: draftingType == 'Semi Taper'
-                                  ? const Color(0xFFe51937)
-                                  : Colors.grey[300],
-                              foregroundColor:
-                                  draftingType == 'Semi Taper' ? Colors.white : Colors.black,
-                            ),
-                            child: Text("Semi Taper", style: TextStyle(fontSize: 16,)),
-                          ),
-                        
-                          if (semiActive) ...[
-                            SizedBox(height: 8),
-                            Row(
-                              children: [
-                                
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text("Max Reduction %"),
-                                      SizedBox(height: 4),
-                                      TextField(
-                                        controller: semitaperPercentageController,
-                                        keyboardType: TextInputType.number,
-                                        decoration: InputDecoration(
-                                          border: OutlineInputBorder(),
-                                        ),
-                                        onChanged: (value) {
-                                          final double? loft = double.tryParse(value);
-                                          if (loft != null && loft >= 0) {
-                                            setState(() {
-                                              maximumReductionPercentage = loft;
-                                              sheets[currentSheetIndex].maximumReductionPercentage = loft;
-                                            });
-                                          }
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                                SizedBox(width: 8),
-                                Expanded(
-                                child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      SizedBox(height: 20),
-                                      OutlinedButton(
-                                        onPressed: () {
-                                          final double? parsed = double.tryParse(semitaperPercentageController.text);
-                                          if (parsed != null && parsed >= 0) {
-                                            setState(() {
-                                              draftingType = 'Semi Taper';
-                                              maximumReductionPercentage = parsed;
-                                              sheets[currentSheetIndex].finalReductionPercentage = parsed;
-                                            });
-                                            enviarDatosAlBackend();
-                                          }
-                                        },
-                                        child: Text("Update", style: TextStyle(fontSize: 16,)),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 8),
-                          ],
-
-                          SizedBox(height: 8),
-                          OutlinedButton(
-                            onPressed: () {
-                              setState(() {
-                                draftingType = 'Optimized';
-                                sheets[currentSheetIndex].draftingType = draftingType;
-                                isManual = false;
-                                isManualAngle = false;
-                                semiActive = false;
-                                diametersModified = List.filled(manualDiameters.length, false);
-                                anglesModified = List.filled(manualAngles.length, false);
-                                enviarDatosAlBackend();
-                              });
-                            },
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: draftingType == 'Optimized' ? const Color(0xFFe51937) : Colors.grey[300],
-                              foregroundColor: draftingType == 'Optimized' ? Colors.white : Colors.black,
-                            ),
-                            child: Text("Optimized", style: TextStyle(fontSize: 16,)),
-                          ),
-                          Spacer(),
-                          /* OutlinedButton.icon(
-                            onPressed: () {
-                              generarYExportarPDF(manualDiameters, reductions);
-                            },
-                            icon: Icon(Icons.download),
-                            label: Text("Export PDF"),
-                            style: OutlinedButton.styleFrom(
-                                backgroundColor: Colors.grey.shade100,         // Fondo blanco
-                                foregroundColor: const Color.fromARGB(255, 110, 83, 207),         // Texto e ícono negros
-                                side: const BorderSide(color: Color(0xFF58585a)), // Borde gris oscuro, opcional
-                             ),
-                          ), */
-
-                          SizedBox(height: 4),
-
-                          OutlinedButton.icon(
-                            onPressed: () async {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => PdfPreviewScreen(
-                                    buildPdf: () => generarPDFBytes(manualDiameters, reductions),
-                                  ),
-                                ),
-                              );
-                            },
-                            icon: Icon(Icons.visibility),
-                            label: Text("Preview PDF", style: TextStyle(fontSize: 16,)),
-                          )
-                      ],
+                        );
+                      },
                     ),
                   ),
                 ),

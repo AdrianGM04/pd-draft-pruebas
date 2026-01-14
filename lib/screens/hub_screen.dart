@@ -261,7 +261,7 @@ class _HubScreenState extends State<HubScreen> {
                 ],
               ),
               child: const Text(
-                "V 1.3",
+                "V 1.3.2",
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
             ),
