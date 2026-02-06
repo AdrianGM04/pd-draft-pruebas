@@ -17,6 +17,23 @@ import '../models/globals.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:excel/excel.dart' as xls;
 
+/// Intent para Undo (Ctrl+Z / Cmd+Z)
+class _UndoIntent extends Intent {
+  const _UndoIntent();
+}
+
+/// Intent para Redo (Ctrl+Y / Cmd+Shift+Z)
+class _RedoIntent extends Intent {
+  const _RedoIntent();
+}
+
+/// Entrada del stack de undo: estado guardado + tipo de cambio para restauración selectiva.
+class _UndoEntry {
+  final SheetData state;
+  /// 'diameters' = al deshacer solo se restauran initial/final diameter (no Product Name, etc.); null = restaurar todo.
+  final String? changeType;
+  const _UndoEntry({required this.state, this.changeType});
+}
 
 // Se crea el estado de a pantalla de PD-Draft
 class OtraPantalla extends StatefulWidget {
@@ -26,24 +43,68 @@ class OtraPantalla extends StatefulWidget {
   State<OtraPantalla> createState() => _OtraPantallaState();
 }
 
-// Se configura el estado del preview del pdf opreview
-class PdfPreviewScreen extends StatelessWidget {
-  final Future<Uint8List> Function() buildPdf;
+// Se configura el estado del preview del pdf con opción de ver Summary, Part Numbers o Both
+class PdfPreviewScreen extends StatefulWidget {
+  final Future<Uint8List> Function(String section) buildPdf;
 
   const PdfPreviewScreen({Key? key, required this.buildPdf}) : super(key: key);
+
+  @override
+  State<PdfPreviewScreen> createState() => _PdfPreviewScreenState();
+}
+
+class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
+  static const String _sectionSummary = 'summary';
+  static const String _sectionPartNumbers = 'partNumbers';
+  static const String _sectionBoth = 'both';
+
+  String _pdfSection = _sectionBoth;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("PDF Preview")),
-      body: PdfPreview(
-        build: (format) => buildPdf(),
-        allowPrinting: true,
-        allowSharing: true,
-        initialPageFormat: PdfPageFormat.letter,
-        canChangeOrientation: true,
-        pdfFileName: "trefilado.pdf",
-        maxPageWidth: 700,
+      body: Column(
+        children: [
+          Expanded(
+            child: PdfPreview(
+              build: (format) => widget.buildPdf(_pdfSection),
+              allowPrinting: true,
+              allowSharing: true,
+              initialPageFormat: PdfPageFormat.letter,
+              canChangeOrientation: true,
+              pdfFileName: "trefilado.pdf",
+              maxPageWidth: 700,
+            ),
+          ),
+          // Selector de sección: Summary (hoja 1), Part Numbers (hoja 2), Both
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            ),
+            child: SafeArea(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text("Show:", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                  SizedBox(width: 12),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: _sectionSummary, label: Text("Summary"), icon: Icon(Icons.summarize, size: 18)),
+                      ButtonSegment(value: _sectionPartNumbers, label: Text("Part Numbers"), icon: Icon(Icons.numbers, size: 18)),
+                      ButtonSegment(value: _sectionBoth, label: Text("Both"), icon: Icon(Icons.picture_as_pdf, size: 18)),
+                    ],
+                    selected: {_pdfSection},
+                    onSelectionChanged: (Set<String> selected) {
+                      setState(() => _pdfSection = selected.first);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -66,7 +127,17 @@ class _OtraPantallaState extends State<OtraPantalla> {
   final TextEditingController clientNameController = TextEditingController();
   final TextEditingController dateController = TextEditingController();
   final TextEditingController advisorController = TextEditingController();
-  
+
+  // FocusNodes para Product Name, Description, Client Name, Advisor (Date se maneja en _selectDate)
+  final FocusNode _productNameFocusNode = FocusNode();
+  final FocusNode _descriptionFocusNode = FocusNode();
+  final FocusNode _clientNameFocusNode = FocusNode();
+  final FocusNode _advisorFocusNode = FocusNode();
+  // Valores "antes de editar" para poder hacer push del undo al salir del campo
+  String _productNameBeforeEdit = '';
+  String _descriptionBeforeEdit = '';
+  String _clientNameBeforeEdit = '';
+  String _advisorBeforeEdit = '';
 
   List<dynamic> diameters = [];
   List<dynamic> reductions = [];
@@ -109,6 +180,16 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
   List<SheetData> sheets = [SheetData()];
   int currentSheetIndex = 0;
+
+  // Entrada del stack de undo: estado + tipo de cambio para restaurar solo lo afectado
+  static const String _undoKindDiameters = 'diameters';
+
+  // Stack para undo (guarda snapshots del estado y tipo de cambio)
+  List<_UndoEntry> _undoStack = [];
+  // Stack para redo: estado actual antes de un undo, para poder "rehacer"
+  List<_UndoEntry> _redoStack = [];
+  static const int _maxUndoStackSize = 20; // Limitar a 20 estados para no consumir mucha memoria
+  bool _isInitialized = false; // Flag para saber si ya se inicializó la pantalla
 
   int? editingDiameterIndex;
   int? editingAnglesIndex;
@@ -277,18 +358,112 @@ class _OtraPantallaState extends State<OtraPantalla> {
       loadRanges(selectedSystem);
     });
     loadSheetData(0);
+    // Marcar como inicializado después de cargar la sheet inicial
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isInitialized = true;
+      _undoStack.clear(); // Limpiar cualquier estado guardado durante la inicialización
+      _redoStack.clear();
+    });
+
+    // Al entrar/salir de Product Name, Description, Client Name, Advisor: guardar "antes" y, al salir, push undo si cambió
+    _productNameFocusNode.addListener(() {
+      if (_productNameFocusNode.hasFocus) {
+        _productNameBeforeEdit = productNameController.text;
+      } else if (productNameController.text != _productNameBeforeEdit) {
+        _pushUndoForMetadataField(productName: _productNameBeforeEdit);
+      }
+    });
+    _descriptionFocusNode.addListener(() {
+      if (_descriptionFocusNode.hasFocus) {
+        _descriptionBeforeEdit = descriptionController.text;
+      } else if (descriptionController.text != _descriptionBeforeEdit) {
+        _pushUndoForMetadataField(description: _descriptionBeforeEdit);
+      }
+    });
+    _clientNameFocusNode.addListener(() {
+      if (_clientNameFocusNode.hasFocus) {
+        _clientNameBeforeEdit = clientNameController.text;
+      } else if (clientNameController.text != _clientNameBeforeEdit) {
+        _pushUndoForMetadataField(clientName: _clientNameBeforeEdit);
+      }
+    });
+    _advisorFocusNode.addListener(() {
+      if (_advisorFocusNode.hasFocus) {
+        _advisorBeforeEdit = advisorController.text;
+      } else if (advisorController.text != _advisorBeforeEdit) {
+        _pushUndoForMetadataField(advisor: _advisorBeforeEdit);
+      }
+    });
   }
 
   @override
   void dispose() {
     _rightPanelCtrl.dispose();
+    _productNameFocusNode.dispose();
+    _descriptionFocusNode.dispose();
+    _clientNameFocusNode.dispose();
+    _advisorFocusNode.dispose();
     super.dispose();
   }
 
   // Funcion que actualiza el valor de "# Dies"
   void updateDiesCount() {
     final int? dies = int.tryParse(diesController.text);
-    if (dies != null && dies >= 1) {
+    if (dies != null && dies >= 1 && dies != numberOfDies) {
+      // Guardar estado ANTES del cambio usando los valores actuales
+      if (_isInitialized && !_isLoadingSheet && !_isUndoing) {
+        // Usar los valores actuales pero con numberOfDies anterior
+        final snapshot = SheetData(
+          numberOfDies: numberOfDies, // Valor anterior
+          initialDiameter: initialDiameterController.text,
+          finalDiameter: finalDiameterController.text,
+          finalSpeed: speeddisplay,
+          decimals: decimalsdisplay,
+          selectedMaterial: selectedMaterial,
+          selectedCarbon: selectedCarbon,
+          temperatureLimit: temperatureLimit,
+          draftingType: draftingType,
+          semiActive: semiActive,
+          finalReductionPercentage: finalReductionPercentage,
+          maximumReductionPercentage: maximumReductionPercentage,
+          finalReductionPercentageSkinPass: finalReductionPercentageSkinPass,
+          firstPressure: firstPressuredisplay,
+          middlePressure: middlePressuredisplay,
+          lastPressure: lastPressuredisplay,
+          tensileMin: tensileMin,
+          tensileMax: tensileMax,
+          pressureDieValues: List<String>.from(pressureDieValues),
+          selectedAngleMode: selectedAngleMode,
+          selectedAngle: selectedAngle,
+          individualAngles: List<int>.from(individualAngles),
+          selectedSystem: selectedSystem,
+          usingStockDies: usingStockDies,
+          isSkinPass: isSkinPass,
+          selectedSpeedUnit: selectedSpeedUnit,
+          selectedOutputUnit: selectedOutputUnit,
+          productName: productNameController.text,
+          description: descriptionController.text,
+          clientName: clientNameController.text,
+          date: dateController.text,
+          advisor: advisorController.text,
+          isManual: isManual,
+          isManualAngle: isManualAngle,
+          diametersModified: List<bool>.from(diametersModified),
+          anglesModified: List<bool>.from(anglesModified),
+          isCustomDelta: isCustomDelta,
+          customMinDelta: customMinDelta,
+          customMaxDelta: customMaxDelta,
+        manualDiameters: List<double>.from(manualDiameters),
+        manualAngles: List<int>.from(manualAngles),
+        );
+        
+        _undoStack.add(_UndoEntry(state: snapshot, changeType: null));
+        _redoStack.clear();
+        if (_undoStack.length > _maxUndoStackSize) {
+          _undoStack.removeAt(0);
+        }
+      }
+      
       setState(() {
         numberOfDies = dies;
         firstDieController.text = firstPressure.toString();
@@ -386,9 +561,12 @@ class _OtraPantallaState extends State<OtraPantalla> {
    // Funcion que actualiza el valor de "Decimals"
   void updateDecimals() {
     final int? decimals = int.tryParse(decimalsController.text);
-    if (decimals != null && decimals >= 1) {
+    if (decimals != null && decimals >= 1 && decimals != decimalsdisplay) {
+      _saveStateBeforeChange(); // Guardar estado ANTES del cambio
+      
       setState(() {
         decimalsdisplay = decimals;
+        sheets[currentSheetIndex].decimals = decimals; // Para que se desplieguen correctamente los decimales por cada sheet
       });
       enviarDatosAlBackend();
     }
@@ -397,7 +575,9 @@ class _OtraPantallaState extends State<OtraPantalla> {
    // Funcion que actualiza el valor de "Input Speed"
   void updateSpeed() {
     final double? finalSpeed= double.tryParse(finalSpeedController.text);
-    if (finalSpeed != null && finalSpeed >= 1) {
+    if (finalSpeed != null && finalSpeed >= 1 && finalSpeed != speeddisplay) {
+      _saveStateBeforeChange(); // Guardar estado ANTES del cambio
+      
       setState(() {
         speeddisplay = finalSpeed;
       });
@@ -408,7 +588,8 @@ class _OtraPantallaState extends State<OtraPantalla> {
    // Funcion que actualiza el valor de "firstPressure"
   void updatePressurefirst() {
     final int? firstPressure = int.tryParse(firstDieController.text);
-    if (firstPressure != null && firstPressure >= 1) {
+    if (firstPressure != null && firstPressure >= 1 && firstPressure != firstPressuredisplay) {
+      _saveStateBeforeChange();
       setState(() {
         firstPressuredisplay = firstPressure;
       });
@@ -418,7 +599,8 @@ class _OtraPantallaState extends State<OtraPantalla> {
    // Funcion que actualiza el valor de "middlePressure"
   void updatePressuremiddle() {
     final int? middlePressure= int.tryParse(middleDiesController.text);
-    if (middlePressure != null && middlePressure >= 1) {
+    if (middlePressure != null && middlePressure >= 1 && middlePressure != middlePressuredisplay) {
+      _saveStateBeforeChange();
       setState(() {
         middlePressuredisplay = middlePressure;
       });
@@ -428,7 +610,8 @@ class _OtraPantallaState extends State<OtraPantalla> {
    // Funcion que actualiza el valor de "lastPressure"
   void updatePressurelast() {
     final int? lastPressure = int.tryParse(lastDieController.text);
-    if (lastPressure != null && lastPressure >= 1) {
+    if (lastPressure != null && lastPressure >= 1 && lastPressure != lastPressuredisplay) {
+      _saveStateBeforeChange();
       setState(() {
         lastPressuredisplay = lastPressure;
       });
@@ -437,15 +620,84 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
    // Funcion que verifica que al editar diametros de manera manual sean posibles
   void validateDiameters() {
-    final double? initial = double.tryParse(initialDiameterController.text);
-    final double? finalD = double.tryParse(finalDiameterController.text);
+    // Leer los nuevos valores del TextField
+    final double? newInitial = double.tryParse(initialDiameterController.text);
+    final double? newFinal = double.tryParse(finalDiameterController.text);
+    
+    // Comparar con los valores guardados en la sheet (valores anteriores)
+    final double? oldInitial = double.tryParse(sheets[currentSheetIndex].initialDiameter);
+    final double? oldFinal = double.tryParse(sheets[currentSheetIndex].finalDiameter);
+    
+    // Solo guardar estado si los valores realmente cambiaron
+    final bool valuesChanged = (newInitial != null && newFinal != null && 
+                                (newInitial != oldInitial || newFinal != oldFinal));
+    
+    if (valuesChanged && _isInitialized && !_isLoadingSheet && !_isUndoing) {
+      // Guardar el snapshot ANTES del cambio: solo el diámetro que cambia usa valor anterior;
+      // el otro conserva el actual para que al deshacer no se borre un cambio previo en ese campo.
+      final bool initialChanged = newInitial != oldInitial;
+      final bool finalChanged = newFinal != oldFinal;
+      final snapshot = SheetData(
+        numberOfDies: numberOfDies,
+        initialDiameter: initialChanged ? sheets[currentSheetIndex].initialDiameter : initialDiameterController.text,
+        finalDiameter: finalChanged ? sheets[currentSheetIndex].finalDiameter : finalDiameterController.text,
+        finalSpeed: speeddisplay,
+        decimals: decimalsdisplay,
+        selectedMaterial: selectedMaterial,
+        selectedCarbon: selectedCarbon,
+        temperatureLimit: temperatureLimit,
+        draftingType: draftingType,
+        semiActive: semiActive,
+        finalReductionPercentage: finalReductionPercentage,
+        maximumReductionPercentage: maximumReductionPercentage,
+        finalReductionPercentageSkinPass: finalReductionPercentageSkinPass,
+        firstPressure: firstPressuredisplay,
+        middlePressure: middlePressuredisplay,
+        lastPressure: lastPressuredisplay,
+        tensileMin: tensileMin,
+        tensileMax: tensileMax,
+        pressureDieValues: List<String>.from(pressureDieValues),
+        selectedAngleMode: selectedAngleMode,
+        selectedAngle: selectedAngle,
+        individualAngles: List<int>.from(individualAngles),
+        selectedSystem: selectedSystem,
+        usingStockDies: usingStockDies,
+        isSkinPass: isSkinPass,
+        selectedSpeedUnit: selectedSpeedUnit,
+        selectedOutputUnit: selectedOutputUnit,
+        productName: productNameController.text,
+        description: descriptionController.text,
+        clientName: clientNameController.text,
+        date: dateController.text,
+        advisor: advisorController.text,
+        isManual: isManual,
+        isManualAngle: isManualAngle,
+        diametersModified: List<bool>.from(diametersModified),
+        anglesModified: List<bool>.from(anglesModified),
+        isCustomDelta: isCustomDelta,
+        customMinDelta: customMinDelta,
+        customMaxDelta: customMaxDelta,
+        manualDiameters: List<double>.from(manualDiameters),
+        manualAngles: List<int>.from(manualAngles),
+      );
+      
+      _undoStack.add(_UndoEntry(state: snapshot, changeType: _undoKindDiameters));
+      _redoStack.clear();
+      if (_undoStack.length > _maxUndoStackSize) {
+        _undoStack.removeAt(0);
+      }
+    }
+    
     setState(() {
-      if (initial == null || finalD == null) {
+      if (newInitial == null || newFinal == null) {
         errorMessage = "Please enter valid numbers for diameters.";
-      } else if (initial <= finalD) {
+      } else if (newInitial <= newFinal) {
         errorMessage = "Initial diameter must be greater than final diameter.";
       } else {
         errorMessage = null;
+        // Actualizar la sheet con los diámetros aceptados para que el próximo snapshot
+        // use los valores correctos y el undo de "solo final" no deshaga también el initial.
+        saveCurrentSheetData();
         enviarDatosAlBackend();
       }
     });
@@ -454,7 +706,9 @@ class _OtraPantallaState extends State<OtraPantalla> {
    // Funcion que actualiza el valor de "temperatureLimit"
   void updateTemperatureLimit() {
     final double? limit = double.tryParse(limitController.text);
-    if (limit != null && limit > 0) {
+    if (limit != null && limit > 0 && limit != temperatureLimit) {
+      _saveStateBeforeChange(); // Guardar estado ANTES del cambio
+      
       setState(() {
         temperatureLimit = limit;
       });
@@ -476,6 +730,397 @@ class _OtraPantallaState extends State<OtraPantalla> {
       sheets[currentSheetIndex].pressureDieValues = List<String>.from(pressureDieValues);
     });
     
+  }
+
+  // Guarda un snapshot del estado actual en el stack de undo
+  // IMPORTANTE: Esta función debe llamarse ANTES de modificar valores, no después
+  void _saveStateForUndo() {
+    // Crear snapshot directamente desde los valores actuales (TextFields y variables de estado)
+    // NO usar saveCurrentSheetData() porque actualizaría la sheet con valores nuevos
+    final snapshot = SheetData(
+      numberOfDies: numberOfDies,
+      initialDiameter: initialDiameterController.text,
+      finalDiameter: finalDiameterController.text,
+      finalSpeed: speeddisplay,
+      decimals: decimalsdisplay,
+      selectedMaterial: selectedMaterial,
+      selectedCarbon: selectedCarbon,
+      temperatureLimit: temperatureLimit,
+      draftingType: draftingType,
+      semiActive: semiActive,
+      finalReductionPercentage: finalReductionPercentage,
+      maximumReductionPercentage: maximumReductionPercentage,
+      finalReductionPercentageSkinPass: finalReductionPercentageSkinPass,
+      firstPressure: firstPressuredisplay,
+      middlePressure: middlePressuredisplay,
+      lastPressure: lastPressuredisplay,
+      tensileMin: tensileMin,
+      tensileMax: tensileMax,
+      pressureDieValues: List<String>.from(pressureDieValues),
+      selectedAngleMode: selectedAngleMode,
+      selectedAngle: selectedAngle,
+      individualAngles: List<int>.from(individualAngles),
+      selectedSystem: selectedSystem,
+      usingStockDies: usingStockDies,
+      isSkinPass: isSkinPass,
+      selectedSpeedUnit: selectedSpeedUnit,
+      selectedOutputUnit: selectedOutputUnit,
+      productName: productNameController.text,
+      description: descriptionController.text,
+      clientName: clientNameController.text,
+      date: dateController.text,
+      advisor: advisorController.text,
+      isManual: isManual,
+      isManualAngle: isManualAngle,
+      diametersModified: List<bool>.from(diametersModified),
+      anglesModified: List<bool>.from(anglesModified),
+      isCustomDelta: isCustomDelta,
+      customMinDelta: customMinDelta,
+      customMaxDelta: customMaxDelta,
+      manualDiameters: List<double>.from(manualDiameters),
+      manualAngles: List<int>.from(manualAngles),
+    );
+    
+    _undoStack.add(_UndoEntry(state: snapshot, changeType: null));
+    _redoStack.clear(); // Cualquier nuevo cambio borra la cola de redo
+    if (_undoStack.length > _maxUndoStackSize) {
+      _undoStack.removeAt(0);
+    }
+  }
+
+  /// Guarda el estado actual en el stack de redo (se usa antes de aplicar un undo).
+  void _pushCurrentStateToRedoStack() {
+    final snapshot = SheetData(
+      numberOfDies: numberOfDies,
+      initialDiameter: initialDiameterController.text,
+      finalDiameter: finalDiameterController.text,
+      finalSpeed: speeddisplay,
+      decimals: decimalsdisplay,
+      selectedMaterial: selectedMaterial,
+      selectedCarbon: selectedCarbon,
+      temperatureLimit: temperatureLimit,
+      draftingType: draftingType,
+      semiActive: semiActive,
+      finalReductionPercentage: finalReductionPercentage,
+      maximumReductionPercentage: maximumReductionPercentage,
+      finalReductionPercentageSkinPass: finalReductionPercentageSkinPass,
+      firstPressure: firstPressuredisplay,
+      middlePressure: middlePressuredisplay,
+      lastPressure: lastPressuredisplay,
+      tensileMin: tensileMin,
+      tensileMax: tensileMax,
+      pressureDieValues: List<String>.from(pressureDieValues),
+      selectedAngleMode: selectedAngleMode,
+      selectedAngle: selectedAngle,
+      individualAngles: List<int>.from(individualAngles),
+      selectedSystem: selectedSystem,
+      usingStockDies: usingStockDies,
+      isSkinPass: isSkinPass,
+      selectedSpeedUnit: selectedSpeedUnit,
+      selectedOutputUnit: selectedOutputUnit,
+      productName: productNameController.text,
+      description: descriptionController.text,
+      clientName: clientNameController.text,
+      date: dateController.text,
+      advisor: advisorController.text,
+      isManual: isManual,
+      isManualAngle: isManualAngle,
+      diametersModified: List<bool>.from(diametersModified),
+      anglesModified: List<bool>.from(anglesModified),
+      isCustomDelta: isCustomDelta,
+      customMinDelta: customMinDelta,
+      customMaxDelta: customMaxDelta,
+      manualDiameters: List<double>.from(manualDiameters),
+      manualAngles: List<int>.from(manualAngles),
+    );
+    _redoStack.add(_UndoEntry(state: snapshot, changeType: null));
+    if (_redoStack.length > _maxUndoStackSize) _redoStack.removeAt(0);
+  }
+
+  // Helper para guardar estado antes de hacer cambios (solo si es necesario)
+  void _saveStateBeforeChange() {
+    if (_isInitialized && !_isLoadingSheet && !_isUndoing) {
+      _saveStateForUndo();
+    }
+  }
+
+  /// Empuja un snapshot de undo con los valores "anteriores" de Product Name, Description, etc.,
+  /// para que al deshacer se restauren esos campos sin borrar el resto.
+  void _pushUndoForMetadataField({
+    String? productName,
+    String? description,
+    String? clientName,
+    String? date,
+    String? advisor,
+  }) {
+    if (!_isInitialized || _isLoadingSheet || _isUndoing) return;
+    final snapshot = SheetData(
+      numberOfDies: numberOfDies,
+      initialDiameter: initialDiameterController.text,
+      finalDiameter: finalDiameterController.text,
+      finalSpeed: speeddisplay,
+      decimals: decimalsdisplay,
+      selectedMaterial: selectedMaterial,
+      selectedCarbon: selectedCarbon,
+      temperatureLimit: temperatureLimit,
+      draftingType: draftingType,
+      semiActive: semiActive,
+      finalReductionPercentage: finalReductionPercentage,
+      maximumReductionPercentage: maximumReductionPercentage,
+      finalReductionPercentageSkinPass: finalReductionPercentageSkinPass,
+      firstPressure: firstPressuredisplay,
+      middlePressure: middlePressuredisplay,
+      lastPressure: lastPressuredisplay,
+      tensileMin: tensileMin,
+      tensileMax: tensileMax,
+      pressureDieValues: List<String>.from(pressureDieValues),
+      selectedAngleMode: selectedAngleMode,
+      selectedAngle: selectedAngle,
+      individualAngles: List<int>.from(individualAngles),
+      selectedSystem: selectedSystem,
+      usingStockDies: usingStockDies,
+      isSkinPass: isSkinPass,
+      selectedSpeedUnit: selectedSpeedUnit,
+      selectedOutputUnit: selectedOutputUnit,
+      productName: productName ?? productNameController.text,
+      description: description ?? descriptionController.text,
+      clientName: clientName ?? clientNameController.text,
+      date: date ?? dateController.text,
+      advisor: advisor ?? advisorController.text,
+      isManual: isManual,
+      isManualAngle: isManualAngle,
+      diametersModified: List<bool>.from(diametersModified),
+      anglesModified: List<bool>.from(anglesModified),
+      isCustomDelta: isCustomDelta,
+      customMinDelta: customMinDelta,
+      customMaxDelta: customMaxDelta,
+      manualDiameters: List<double>.from(manualDiameters),
+      manualAngles: List<int>.from(manualAngles),
+    );
+    _undoStack.add(_UndoEntry(state: snapshot, changeType: null));
+    _redoStack.clear();
+    if (_undoStack.length > _maxUndoStackSize) _undoStack.removeAt(0);
+  }
+
+  // Restaura el último estado guardado (undo)
+  Future<void> _performUndo() async {
+    if (_undoStack.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nothing to undo'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+      return;
+    }
+
+    // Guardar estado actual en redo antes de deshacer
+    _pushCurrentStateToRedoStack();
+
+    // Activar ANTES de cualquier setState para que los onChanged/callbacks
+    // de los TextField no guarden estado al restaurar los controladores
+    _isUndoing = true;
+
+    final entry = _undoStack.removeLast();
+    final previousState = entry.state;
+
+    if (entry.changeType == _undoKindDiameters) {
+      // Undo solo de diámetros: restaurar únicamente initial/final diameter.
+      // No tocar Product Name, Description, Client, Date, Advisor.
+      setState(() {
+        initialDiameterController.text = previousState.initialDiameter;
+        finalDiameterController.text = previousState.finalDiameter;
+      });
+      saveCurrentSheetData();
+      await enviarDatosAlBackend();
+    } else {
+      // Undo completo: restaurar todo el estado
+      setState(() {
+        diesController.text = previousState.numberOfDies.toString();
+        initialDiameterController.text = previousState.initialDiameter;
+        finalDiameterController.text = previousState.finalDiameter;
+        decimalsController.text = previousState.decimals.toString();
+        finalSpeedController.text = previousState.finalSpeed.toString();
+        speeddisplay = previousState.finalSpeed;
+        selectedMaterial = previousState.selectedMaterial;
+        selectedCarbon = previousState.selectedCarbon;
+        numberOfDies = previousState.numberOfDies;
+        temperatureLimit = previousState.temperatureLimit;
+        limitController.text = previousState.temperatureLimit.toStringAsFixed(0);
+        draftingType = previousState.draftingType;
+        semiActive = previousState.semiActive;
+        finalReductionPercentage = previousState.finalReductionPercentage;
+        taperPercentageController.text = previousState.finalReductionPercentage.toString();
+        maximumReductionPercentage = previousState.maximumReductionPercentage;
+        semitaperPercentageController.text = previousState.maximumReductionPercentage.toString();
+        pressureDieValues = List<String>.from(previousState.pressureDieValues);
+        firstPressuredisplay = previousState.firstPressure;
+        middlePressuredisplay = previousState.middlePressure;
+        lastPressuredisplay = previousState.lastPressure;
+        firstDieController.text = previousState.firstPressure.toString();
+        middleDiesController.text = previousState.middlePressure.toString();
+        lastDieController.text = previousState.lastPressure.toString();
+        selectedAngleMode = previousState.selectedAngleMode;
+        selectedAngle = previousState.selectedAngle;
+        individualAngles = List<int>.from(previousState.individualAngles);
+        manualDiameters = List<double>.from(previousState.manualDiameters);
+        manualAngles = List<int>.from(previousState.manualAngles);
+        usingStockDies = previousState.usingStockDies;
+        selectedSystem = previousState.selectedSystem;
+        isSkinPass = previousState.isSkinPass;
+        finalReductionPercentageSkinPass = previousState.finalReductionPercentageSkinPass;
+        selectedSpeedUnit = previousState.selectedSpeedUnit;
+        selectedOutputUnit = previousState.selectedOutputUnit;
+        productNameController.text = previousState.productName;
+        descriptionController.text = previousState.description;
+        clientNameController.text = previousState.clientName;
+        dateController.text = previousState.date;
+        advisorController.text = previousState.advisor;
+        isManual = previousState.isManual;
+        semiActive = previousState.semiActive;
+        isCustomDelta = previousState.isCustomDelta;
+        customMinDelta = previousState.customMinDelta;
+        minDeltaController.text = previousState.customMinDelta.toString();
+        customMaxDelta = previousState.customMaxDelta;
+        maxDeltaController.text = previousState.customMaxDelta.toString();
+        isManualAngle = previousState.isManualAngle;
+        diametersModified = List<bool>.from(previousState.diametersModified);
+        anglesModified = List<bool>.from(previousState.anglesModified);
+        decimalsdisplay = previousState.decimals;
+      });
+      saveCurrentSheetData();
+      applyPressureDieValues();
+      await enviarDatosAlBackend();
+    }
+
+    _isUndoing = false;
+  }
+
+  // Rehace el último cambio que se deshizo (redo)
+  Future<void> _performRedo() async {
+    if (_redoStack.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nothing to redo'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+      return;
+    }
+
+    // Guardar estado actual en undo para poder deshacer después del redo
+    _undoStack.add(_UndoEntry(state: _buildCurrentStateSnapshot(), changeType: null));
+    if (_undoStack.length > _maxUndoStackSize) _undoStack.removeAt(0);
+
+    _isUndoing = true; // Evitar que callbacks guarden durante la restauración
+
+    final entry = _redoStack.removeLast();
+    final nextState = entry.state;
+
+    setState(() {
+      diesController.text = nextState.numberOfDies.toString();
+      initialDiameterController.text = nextState.initialDiameter;
+      finalDiameterController.text = nextState.finalDiameter;
+      decimalsController.text = nextState.decimals.toString();
+      finalSpeedController.text = nextState.finalSpeed.toString();
+      speeddisplay = nextState.finalSpeed;
+      selectedMaterial = nextState.selectedMaterial;
+      selectedCarbon = nextState.selectedCarbon;
+      numberOfDies = nextState.numberOfDies;
+      temperatureLimit = nextState.temperatureLimit;
+      limitController.text = nextState.temperatureLimit.toStringAsFixed(0);
+      draftingType = nextState.draftingType;
+      semiActive = nextState.semiActive;
+      finalReductionPercentage = nextState.finalReductionPercentage;
+      taperPercentageController.text = nextState.finalReductionPercentage.toString();
+      maximumReductionPercentage = nextState.maximumReductionPercentage;
+      semitaperPercentageController.text = nextState.maximumReductionPercentage.toString();
+      pressureDieValues = List<String>.from(nextState.pressureDieValues);
+      firstPressuredisplay = nextState.firstPressure;
+      middlePressuredisplay = nextState.middlePressure;
+      lastPressuredisplay = nextState.lastPressure;
+      firstDieController.text = nextState.firstPressure.toString();
+      middleDiesController.text = nextState.middlePressure.toString();
+      lastDieController.text = nextState.lastPressure.toString();
+      selectedAngleMode = nextState.selectedAngleMode;
+      selectedAngle = nextState.selectedAngle;
+      individualAngles = List<int>.from(nextState.individualAngles);
+      manualDiameters = List<double>.from(nextState.manualDiameters);
+      manualAngles = List<int>.from(nextState.manualAngles);
+      usingStockDies = nextState.usingStockDies;
+      selectedSystem = nextState.selectedSystem;
+      isSkinPass = nextState.isSkinPass;
+      finalReductionPercentageSkinPass = nextState.finalReductionPercentageSkinPass;
+      selectedSpeedUnit = nextState.selectedSpeedUnit;
+      selectedOutputUnit = nextState.selectedOutputUnit;
+      productNameController.text = nextState.productName;
+      descriptionController.text = nextState.description;
+      clientNameController.text = nextState.clientName;
+      dateController.text = nextState.date;
+      advisorController.text = nextState.advisor;
+      isManual = nextState.isManual;
+      semiActive = nextState.semiActive;
+      isCustomDelta = nextState.isCustomDelta;
+      customMinDelta = nextState.customMinDelta;
+      minDeltaController.text = nextState.customMinDelta.toString();
+      customMaxDelta = nextState.customMaxDelta;
+      maxDeltaController.text = nextState.customMaxDelta.toString();
+      isManualAngle = nextState.isManualAngle;
+      diametersModified = List<bool>.from(nextState.diametersModified);
+      anglesModified = List<bool>.from(nextState.anglesModified);
+      decimalsdisplay = nextState.decimals;
+    });
+    saveCurrentSheetData();
+    applyPressureDieValues();
+    await enviarDatosAlBackend();
+
+    _isUndoing = false;
+  }
+
+  SheetData _buildCurrentStateSnapshot() {
+    return SheetData(
+      numberOfDies: numberOfDies,
+      initialDiameter: initialDiameterController.text,
+      finalDiameter: finalDiameterController.text,
+      finalSpeed: speeddisplay,
+      decimals: decimalsdisplay,
+      selectedMaterial: selectedMaterial,
+      selectedCarbon: selectedCarbon,
+      temperatureLimit: temperatureLimit,
+      draftingType: draftingType,
+      semiActive: semiActive,
+      finalReductionPercentage: finalReductionPercentage,
+      maximumReductionPercentage: maximumReductionPercentage,
+      finalReductionPercentageSkinPass: finalReductionPercentageSkinPass,
+      firstPressure: firstPressuredisplay,
+      middlePressure: middlePressuredisplay,
+      lastPressure: lastPressuredisplay,
+      tensileMin: tensileMin,
+      tensileMax: tensileMax,
+      pressureDieValues: List<String>.from(pressureDieValues),
+      selectedAngleMode: selectedAngleMode,
+      selectedAngle: selectedAngle,
+      individualAngles: List<int>.from(individualAngles),
+      selectedSystem: selectedSystem,
+      usingStockDies: usingStockDies,
+      isSkinPass: isSkinPass,
+      selectedSpeedUnit: selectedSpeedUnit,
+      selectedOutputUnit: selectedOutputUnit,
+      productName: productNameController.text,
+      description: descriptionController.text,
+      clientName: clientNameController.text,
+      date: dateController.text,
+      advisor: advisorController.text,
+      isManual: isManual,
+      isManualAngle: isManualAngle,
+      diametersModified: List<bool>.from(diametersModified),
+      anglesModified: List<bool>.from(anglesModified),
+      isCustomDelta: isCustomDelta,
+      customMinDelta: customMinDelta,
+      customMaxDelta: customMaxDelta,
+      manualDiameters: List<double>.from(manualDiameters),
+      manualAngles: List<int>.from(manualAngles),
+    );
   }
 
   // Funcion que guarda todas las variables de la app en mapas para poder utilizar multiples sheets
@@ -510,6 +1155,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
     current.advisor = advisorController.text;
     current.isManual = isManual;
     current.semiActive = semiActive;
+    current.draftingType = draftingType;
     current.isManualAngle = isManualAngle;
     current.diametersModified = List<bool>.from(diametersModified);
     current.anglesModified = List<bool>.from(anglesModified);
@@ -519,14 +1165,146 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
   }
 
+  // Funcion helper para copiar todos los valores de una SheetData a otra
+  SheetData _copySheetData(SheetData source) {
+    return SheetData(
+      numberOfDies: source.numberOfDies,
+      initialDiameter: source.initialDiameter,
+      finalDiameter: source.finalDiameter,
+      finalSpeed: source.finalSpeed,
+      decimals: source.decimals,
+      selectedMaterial: source.selectedMaterial,
+      selectedCarbon: source.selectedCarbon,
+      temperatureLimit: source.temperatureLimit,
+      draftingType: source.draftingType,
+      semiActive: source.semiActive,
+      finalReductionPercentage: source.finalReductionPercentage,
+      maximumReductionPercentage: source.maximumReductionPercentage,
+      finalReductionPercentageSkinPass: source.finalReductionPercentageSkinPass,
+      firstPressure: source.firstPressure,
+      middlePressure: source.middlePressure,
+      lastPressure: source.lastPressure,
+      tensileMin: source.tensileMin,
+      tensileMax: source.tensileMax,
+      pressureDieValues: List<String>.from(source.pressureDieValues),
+      selectedAngleMode: source.selectedAngleMode,
+      selectedAngle: source.selectedAngle,
+      individualAngles: List<int>.from(source.individualAngles),
+      selectedSystem: source.selectedSystem,
+      usingStockDies: source.usingStockDies,
+      isSkinPass: source.isSkinPass,
+      selectedSpeedUnit: source.selectedSpeedUnit,
+      selectedOutputUnit: source.selectedOutputUnit,
+      productName: source.productName,
+      description: source.description,
+      clientName: source.clientName,
+      date: source.date,
+      advisor: source.advisor,
+      manualDiameters: List<double>.from(source.manualDiameters),
+      manualAngles: List<int>.from(source.manualAngles),
+      isManual: source.isManual,
+      isManualAngle: source.isManualAngle,
+      diametersModified: List<bool>.from(source.diametersModified),
+      anglesModified: List<bool>.from(source.anglesModified),
+      isCustomDelta: source.isCustomDelta,
+      customMinDelta: source.customMinDelta,
+      customMaxDelta: source.customMaxDelta,
+    );
+  }
+
+  // Funcion que muestra el dialogo para elegir si copiar valores o usar defaults
+  Future<void> _showAddSheetDialog() async {
+    final result = await showDialog<bool>( // Mostrar dialogo y esperar una respuesta del usuario
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Sheet'),
+        content: const Text(
+          'Do you want to copy all values from the current sheet or start with default values?',
+          style: TextStyle(fontSize: 16),
+        ),
+        actions: [ // Botones
+          OutlinedButton( // Boton de valores default
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Default Values', style: TextStyle(fontSize: 16)),
+          ),
+          OutlinedButton( // Boton de copiar los valores actuales a la nueva sheet
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Copy Values', style: TextStyle(fontSize: 16)),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null) return; // Usuario cancelo
+
+    // Guardar la sheet actual antes de crear la nueva
+    saveCurrentSheetData();
+
+    setState(() {
+      if (result == true) {
+        // Copiar valores de la sheet actual
+        final newSheet = _copySheetData(sheets[currentSheetIndex]);
+        newSheet.name = "Sheet ${sheets.length + 1}";
+        sheets.add(newSheet);
+      } else {
+        // Usar valores default
+        sheets.add(SheetData(
+          name: "Sheet ${sheets.length + 1}",
+          selectedSystem: globalSelectedSystem,
+        ));
+      }
+
+      loadSheetData(sheets.length - 1);
+
+      // Si se usaron defaults, aplicar valores segun el sistema
+      if (result == false) {
+        if (globalSelectedSystem == 'metric') { // Aplicar valores metricos
+          selectedSystem = 'metric';
+          decimalsdisplay = memoryDecimals;
+          decimalsController.text = memoryDecimals.toString();
+          limitController.text = "120";
+          initialDiameterController.text = "5.5";
+          finalDiameterController.text = "2";
+          temperatureLimit = 120;
+        } else {
+          selectedSystem = 'imperial'; // Aplicar valores imperiales
+          decimalsdisplay = memoryDecimals;
+          decimalsController.text = memoryDecimals.toString();
+          limitController.text = "210";
+          initialDiameterController.text = "0.218";
+          finalDiameterController.text = "0.080";
+          temperatureLimit = 210;
+        }
+        // Resetear flags manuales
+        isManual = false;
+        isManualAngle = false;
+        diametersModified = List.filled(manualDiameters.length, false);
+        anglesModified = List.filled(manualAngles.length, false);
+      }
+
+      if (dateController.text.isEmpty) {
+        DateTime hoy = DateTime.now();
+        String rajang = DateFormat('yyyy-MMM-dd').format(hoy);
+        dateController.text = rajang;
+      }
+
+      enviarDatosAlBackend();
+    });
+  }
+
   // Funcion que carga los valores de las variables obtenidas de los mapas de sheets
   void loadSheetData(int index) {
+    _isLoadingSheet = true; // Marcar que estamos cargando una sheet
+    // Limpiar los stacks cuando se cambia de sheet
+    _undoStack.clear();
+    _redoStack.clear();
     final data = sheets[index];
     setState(() {
       diesController.text = data.numberOfDies.toString();
       initialDiameterController.text = data.initialDiameter;
       finalDiameterController.text = data.finalDiameter;
       decimalsController.text = data.decimals.toString();
+      decimalsdisplay = data.decimals; // Para que se desplieguen correctamente los decimales por cada sheet
       finalSpeedController.text = data.finalSpeed.toString();
       selectedMaterial = data.selectedMaterial;
       selectedCarbon = data.selectedCarbon;
@@ -582,6 +1360,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
     applyPressureDieValues();
     enviarDatosAlBackend();
+    _isLoadingSheet = false; // Ya terminamos de cargar
   }
 
   // Funcion que inicializa el proceso de exportacion de datos
@@ -598,6 +1377,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
   }
 
   Future<void> _selectDate() async {
+    _saveStateBeforeChange(); // Guardar estado antes de cambiar la fecha para que entre en la cola del undo
     DateTime hoy = DateTime.now();
     int anio = hoy.year;
 
@@ -670,8 +1450,16 @@ class _OtraPantallaState extends State<OtraPantalla> {
     
   }
 
+  // Flag para evitar guardar estado cuando se carga una sheet
+  bool _isLoadingSheet = false;
+  // Flag para evitar guardar estado cuando se está haciendo undo
+  bool _isUndoing = false;
+  // Flag para indicar si hubo un cambio del usuario que requiere guardar estado
+  bool _shouldSaveStateForUndo = false;
+
   // Funcion que envia los valores de la app al archivo calculo para hacer los calculos
   Future<Map<String, dynamic>?> enviarDatosAlBackend() async {
+    // NO guardar estado aquí - cada función debe guardar su propio estado antes de hacer cambios
     final int? dies = int.tryParse(diesController.text);
     final double? initial = double.tryParse(initialDiameterController.text);
     final double? finalD = double.tryParse(finalDiameterController.text);
@@ -1252,11 +2040,17 @@ class _OtraPantallaState extends State<OtraPantalla> {
     await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   }
 
+  /// Valores para mostrar solo una sección del PDF en el preview: 'summary' (hoja 1), 'partNumbers' (hoja 2), 'both'.
+  static const String pdfSectionSummary = 'summary';
+  static const String pdfSectionPartNumbers = 'partNumbers';
+  static const String pdfSectionBoth = 'both';
+
   // Funcion que genera todo el cuerpo de las paginas de pdf
   Future<Uint8List> generarPDFBytes(
     List<double> diametros,
-    List<dynamic> reductions,
-  ) async {
+    List<dynamic> reductions, {
+    String pdfSection = 'both',
+  }) async {
     final pdf = pw.Document();
 
     final tableData = List.generate(
@@ -1339,7 +2133,8 @@ class _OtraPantallaState extends State<OtraPantalla> {
     final imageBytes = await rootBundle.load('assets/images/titulo5-logo.png');
     final image = pw.MemoryImage(imageBytes.buffer.asUint8List());
 
-    // MultiPage PRINCIPAL
+    // Hoja 1: Summary
+    if (pdfSection == pdfSectionSummary || pdfSection == pdfSectionBoth) {
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.letter,
@@ -1514,7 +2309,10 @@ class _OtraPantallaState extends State<OtraPantalla> {
         ],
       ),
     );
+    }
 
+    // Hoja 2: Part Numbers
+    if (pdfSection == pdfSectionPartNumbers || pdfSection == pdfSectionBoth) {
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
@@ -1547,6 +2345,7 @@ class _OtraPantallaState extends State<OtraPantalla> {
         ],
       ),
     );
+    }
 
     return pdf.save();
   }
@@ -3003,7 +3802,27 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
   Widget build(BuildContext context) {
     final int tableRows = numberOfDies + 1;
 
-    return WillPopScope(
+    return Shortcuts(
+      shortcuts: <ShortcutActivator, Intent>{
+        // Undo: Ctrl+Z (Windows/Linux), Cmd+Z (Mac)
+        SingleActivator(LogicalKeyboardKey.keyZ, control: true): const _UndoIntent(),
+        SingleActivator(LogicalKeyboardKey.keyZ, meta: true): const _UndoIntent(),
+        // Redo: Ctrl+Y (Windows/Linux), Cmd+Shift+Z (Mac)
+        SingleActivator(LogicalKeyboardKey.keyY, control: true): const _RedoIntent(),
+        SingleActivator(LogicalKeyboardKey.keyZ, meta: true, shift: true): const _RedoIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          _UndoIntent: CallbackAction<_UndoIntent>(onInvoke: (_) {
+            _performUndo();
+            return null;
+          }),
+          _RedoIntent: CallbackAction<_RedoIntent>(onInvoke: (_) {
+            _performRedo();
+            return null;
+          }),
+        },
+        child: WillPopScope(
       onWillPop: () async {
         final salir = await showDialog<bool>(
           context: context,
@@ -3037,6 +3856,45 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
             height: 60,
             fit: BoxFit.contain,
           ),
+          actions: [
+            // Botón de Undo
+            IconButton(
+              icon: const Icon(Icons.undo, color: Colors.white),
+              tooltip: 'Undo',
+              onPressed: _performUndo,
+            ),
+            // Botón de Redo
+            IconButton(
+              icon: const Icon(Icons.redo, color: Colors.white),
+              tooltip: 'Redo',
+              onPressed: _performRedo,
+            ),
+            // Cuadro de versión
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 6,
+                        offset: const Offset(3, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Text(
+                    "V 1.3.2",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
         body: Column(
           children: [
@@ -3073,6 +3931,7 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
                             Text("Technical Rep", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             TextField(
                               controller: advisorController,
+                              focusNode: _advisorFocusNode,
                               style: TextStyle(fontSize: 15),
                               decoration: InputDecoration(
                                 border: OutlineInputBorder(),
@@ -3128,6 +3987,7 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
                             Text("Product Name", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             TextField(
                               controller: productNameController,
+                              focusNode: _productNameFocusNode,
                               style: TextStyle(fontSize: 15),
                               decoration: InputDecoration(
                                 border: OutlineInputBorder(),
@@ -3150,6 +4010,7 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
                             Text("Client Name", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             TextField(
                               controller: clientNameController,
+                              focusNode: _clientNameFocusNode,
                               style: TextStyle(fontSize: 15),
                               decoration: InputDecoration(
                                 border: OutlineInputBorder(),
@@ -3173,6 +4034,7 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
                             
                             TextField(
                               controller: descriptionController,
+                              focusNode: _descriptionFocusNode,
                               style: TextStyle(fontSize: 15),
                               minLines: 1,       
                               maxLines: 5,       
@@ -5301,6 +6163,9 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
                                   // Botón Linear
                                   OutlinedButton(
                                     onPressed: () {
+                                      if (draftingType != 'Linear') {
+                                        _saveStateBeforeChange(); // Guardar estado ANTES del cambio
+                                      }
                                       setState(() {
                                         draftingType = 'Linear';
                                         sheets[currentSheetIndex].draftingType = draftingType;
@@ -5328,6 +6193,9 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
                                   // Botón Full Taper
                                   OutlinedButton(
                                     onPressed: () {
+                                      if (draftingType != 'Full Taper') {
+                                        _saveStateBeforeChange(); // Guardar estado ANTES del cambio
+                                      }
                                       setState(() {
                                         draftingType = 'Full Taper';
                                         sheets[currentSheetIndex].draftingType = draftingType;
@@ -5445,20 +6313,21 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
                                       ],
                                     ),
                                     SizedBox(height: 8),
-                                    OutlinedButton(
-                                      onPressed: () {
-                                        final double? parsed = double.tryParse(
-                                            taperPercentageController.text);
-                                        if (parsed != null && parsed >= 0) {
-                                          setState(() {
-                                            finalReductionPercentage = parsed;
-                                            sheets[currentSheetIndex]
-                                                .finalReductionPercentage = parsed;
-                                          });
-                                          enviarDatosAlBackend();
-                                        }
-                                      },
-                                      child: Text("Update", style: TextStyle(fontSize: 16)),
+                                  OutlinedButton(
+                                    onPressed: () {
+                                      final double? parsed = double.tryParse(
+                                          taperPercentageController.text);
+                                      if (parsed != null && parsed >= 0 && parsed != finalReductionPercentage) {
+                                        _saveStateBeforeChange(); // Guardar estado ANTES del cambio
+                                        setState(() {
+                                          finalReductionPercentage = parsed;
+                                          sheets[currentSheetIndex]
+                                              .finalReductionPercentage = parsed;
+                                        });
+                                        enviarDatosAlBackend();
+                                      }
+                                    },
+                                    child: Text("Update", style: TextStyle(fontSize: 16)),
                                     ),
                                   ],
 
@@ -5470,6 +6339,9 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
                                             draftingType == 'Optimized')
                                         ? null
                                         : () {
+                                            if (!semiActive) {
+                                              _saveStateBeforeChange(); // Guardar estado ANTES del cambio
+                                            }
                                             setState(() {
                                               semiActive = true;
                                               sheets[currentSheetIndex].draftingType =
@@ -5546,7 +6418,8 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
                                                 onPressed: () {
                                                   final double? parsed = double.tryParse(
                                                       semitaperPercentageController.text);
-                                                  if (parsed != null && parsed >= 0) {
+                                                  if (parsed != null && parsed >= 0 && parsed != maximumReductionPercentage) {
+                                                    _saveStateBeforeChange(); // Guardar estado ANTES del cambio
                                                     setState(() {
                                                       draftingType = 'Semi Taper';
                                                       maximumReductionPercentage = parsed;
@@ -5571,6 +6444,9 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
 
                                   OutlinedButton(
                                     onPressed: () {
+                                      if (draftingType != 'Optimized') {
+                                        _saveStateBeforeChange(); // Guardar estado ANTES del cambio
+                                      }
                                       setState(() {
                                         draftingType = 'Optimized';
                                         sheets[currentSheetIndex].draftingType = draftingType;
@@ -5605,8 +6481,8 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
                                         context,
                                         MaterialPageRoute(
                                           builder: (_) => PdfPreviewScreen(
-                                            buildPdf: () =>
-                                                generarPDFBytes(manualDiameters, reductions),
+                                            buildPdf: (section) =>
+                                                generarPDFBytes(manualDiameters, reductions, pdfSection: section),
                                           ),
                                         ),
                                       );
@@ -5635,46 +6511,7 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
                 // Botón Add Sheet
                 TextButton(
                   onPressed: () {
-                    saveCurrentSheetData();
-
-                    setState(() {
-                      sheets.add(SheetData(
-                        name: "Sheet ${sheets.length + 1}",
-                        selectedSystem: globalSelectedSystem,
-                      ));
-
-                      loadSheetData(sheets.length - 1);
-
-                      if (globalSelectedSystem == 'metric') {
-                        selectedSystem = 'metric';
-                        decimalsdisplay = memoryDecimals;
-                        decimalsController.text = memoryDecimals.toString();
-                        limitController.text = "120";
-                        initialDiameterController.text = "5.5";
-                        finalDiameterController.text = "2";
-                        temperatureLimit = 120;
-                      } else {
-                        selectedSystem = 'imperial';
-                        decimalsdisplay = memoryDecimals;
-                        decimalsController.text = memoryDecimals.toString();
-                        limitController.text = "210";
-                        initialDiameterController.text = "0.218";
-                        finalDiameterController.text = "0.080";
-                        temperatureLimit = 210;
-                      }
-                      isManual = false;
-                      isManualAngle = false;
-                      diametersModified = List.filled(manualDiameters.length, false);
-                      anglesModified = List.filled(manualAngles.length, false);
-
-                      if (dateController.text.isEmpty) {
-                        DateTime hoy = DateTime.now();
-                        String rajang = DateFormat('yyyy-MMM-dd').format(hoy);
-                        dateController.text = rajang;
-                      }
-
-                      enviarDatosAlBackend();
-                    });
+                    _showAddSheetDialog(); // Aplicar la funcion de Add Sheet (aplicar valores default o copiar los actuales a la nueva sheet)
                   },
                   style: TextButton.styleFrom(foregroundColor: Colors.white),
                   child: const Text("+ Add Sheet", style: TextStyle(fontSize: 16,)),
@@ -5769,9 +6606,11 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
               ],
             ),
           ),
-        ],
-      ),
-    )
-    );
+            ],
+          ),
+        ),
+      ),  // WillPopScope
+    ),      // Actions
+    );      // Shortcuts
   }
 }

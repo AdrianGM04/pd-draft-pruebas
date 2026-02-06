@@ -2896,6 +2896,32 @@ Widget build(BuildContext context) {
         height: 60,
         fit: BoxFit.contain,
       ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: Center(
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 6,
+                    offset: const Offset(3, 3),
+                  ),
+                ],
+              ),
+              child: const Text(
+                "V 1.3.2",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ),
+        ),
+      ],
     ),
 
     // ───────── CUERPO ─────────

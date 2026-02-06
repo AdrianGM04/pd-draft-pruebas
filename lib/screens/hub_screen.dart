@@ -266,6 +266,32 @@ class _HubScreenState extends State<HubScreen> {
               ),
             ),
           ),
+          Positioned(
+            bottom: 16,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 6,
+                      offset: const Offset(3, 3),
+                    ),
+                  ],
+                ),
+                child: const Text(
+                  "Disclaimer: El uso de esta aplicación está sujeto a los términos y condiciones de Paramount Die.",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
