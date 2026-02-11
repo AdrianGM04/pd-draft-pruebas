@@ -157,6 +157,7 @@ const Map<String, DieDims> kDieDims = {
   'TR4D': DieDims(11.430, 12.700),
   'TR6' : DieDims(17.780, 18.034),
   'TR8' : DieDims(21.082, 25.400),
+  'TR9' : DieDims(30.226, 21.082),
 };
 
 // ───────── Back-Relief DIÁMETRO FIJO por tipo de dado (mm) ─────────
@@ -165,6 +166,7 @@ const Map<String, double> kBackReliefDiaMmByDie = {
   'TR4D':  3.81,
   'TR6' : 12.70,
   'TR8' : 15.88,
+  'TR9' : 20.955,
 };
 
 double _fixedBackReliefDiaMmFor(String die) =>
@@ -337,7 +339,7 @@ double get _maxDieWidthMm =>
   };
 
   //  justo debajo de _selectedGrade
-  static const List<String> _dieTypes = ['TR4', 'TR4D', 'TR6', 'TR8'];
+  static const List<String> _dieTypes = ['TR4', 'TR4D', 'TR6', 'TR8', 'TR9'];
   String _selectedDieType = _dieTypes.first;     // valor por defecto: TR4
 
   // ─── Compare Die ───────────────────────────────────────────────
@@ -349,7 +351,7 @@ _DieVisual _visualForDie(String die) {
   final dims = kDieDims[die]!;
   double refW, refH;
   final areaRef = kDieDims['TR4']!.widthMm * kDieDims['TR4']!.heightMm;
-  if (die == 'TR6' || die == 'TR8') {
+  if (die == 'TR6' || die == 'TR8' || die == 'TR9') {
     final ratio = dims.widthMm / dims.heightMm;
     final wVis  = sqrt(areaRef * ratio);
     final hVis  = areaRef / wVis;
@@ -468,9 +470,9 @@ double _computeAzulXFor(
     _dieWidthMm  = dims.widthMm;
     _dieHeightMm = dims.heightMm;
 
-    // ── Marco visual: TR6 y TR8 usan el mismo criterio (mantener área TR4 pero con su razón W/H)
+    // ── Marco visual: TR6, TR8 y TR9 usan el mismo criterio (mantener área TR4 pero con su razón W/H)
     final areaRef = kDieDims['TR4']!.widthMm * kDieDims['TR4']!.heightMm;
-    if (die == 'TR6' || die == 'TR8') {
+    if (die == 'TR6' || die == 'TR8' || die == 'TR9') {
       final ratio = _dieWidthMm / _dieHeightMm; // W/H del tipo
       final wVis  = sqrt(areaRef * ratio);
       final hVis  = areaRef / wVis;
@@ -618,6 +620,7 @@ static const Map<String, List<int>> _presetAngles = {
   'TR4D': [9],
   'TR6' : [8, 12, 16],
   'TR8' : [12, 16, 18],
+  'TR9' : [12, 16, 18],
 };
 
 // Límites de Finished Diameter (mm) por Die Type y ángulo (Custom Die = OFF)
@@ -634,6 +637,11 @@ static const Map<String, Map<int, List<List<double>>>> _fdLimitsMm = {
     16: [[3.80, 5.49], [5.50, 8.90]],
   },
   'TR8': {
+    12: [[5.30, 13.00]],
+    16: [[4.50, 7.50]],
+    18: [[6.00, 13.00]],
+  },
+  'TR9': {
     12: [[5.30, 13.00]],
     16: [[4.50, 7.50]],
     18: [[6.00, 13.00]],
@@ -689,9 +697,11 @@ void _syncAngleInputWithMode() {
         (m['part_number'] ?? '').toString().toUpperCase().startsWith('TR4D-')).length;
     int cTR6  = _rcDb.where((m) =>
         (m['part_number'] ?? '').toString().toUpperCase().startsWith('TR6-')).length;
+    int cTR9  = _rcDb.where((m) =>
+        (m['part_number'] ?? '').toString().toUpperCase().startsWith('TR9-')).length;
 
     // ignore: avoid_print
-    print('[RC] loaded: TR4=$cTR4  TR4D=$cTR4D  TR6=$cTR6  total=${_rcDb.length}');
+    print('[RC] loaded: TR4=$cTR4  TR4D=$cTR4D  TR6=$cTR6  TR9=$cTR9  total=${_rcDb.length}');
   }
 
   String _normalizePn(String s) =>
@@ -704,7 +714,8 @@ bool _pnMatchesSelected(String pnRaw) {
     case 'TR4D': return pn.startsWith('TR4D');
     case 'TR4' : return pn.startsWith('TR4') && !pn.startsWith('TR4D');
     case 'TR6' : return pn.startsWith('TR6');
-    case 'TR8' : return pn.startsWith('TR8'); // ← NUEVO
+    case 'TR8' : return pn.startsWith('TR8');
+    case 'TR9' : return pn.startsWith('TR9');
     default    : return false;
   }
 }
@@ -1522,7 +1533,7 @@ Future<void> _checkPart() async {
 
   // Si el usuario eligió TR6 pero no hay PNs TR6 en la DB cargada, avisa claro
 // dentro de _checkPart()
-if ((_selectedDieType == 'TR6' || _selectedDieType == 'TR8') &&
+if ((_selectedDieType == 'TR6' || _selectedDieType == 'TR8' || _selectedDieType == 'TR9') &&
     !_rcDb.any((m) => (m['part_number'] ?? '')
         .toString()
         .toUpperCase()
@@ -1659,7 +1670,7 @@ if ((_selectedDieType == 'TR6' || _selectedDieType == 'TR8') &&
 Map<String, dynamic>? parseRoughCorePn(String raw) {
   final pn = raw.trim().toUpperCase();
   // sólo aceptamos prefijos válidos y acordes al tipo elegido
-  final okPrefix = pn.startsWith('TR4-') || pn.startsWith('TR4D-') || pn.startsWith('TR6-') || pn.startsWith('TR8-');;
+  final okPrefix = pn.startsWith('TR4-') || pn.startsWith('TR4D-') || pn.startsWith('TR6-') || pn.startsWith('TR8-') || pn.startsWith('TR9-');
   if (!okPrefix) return null;
   if (!_pnMatchesSelected(pn)) return null;   // sigue respetando el die seleccionado
 
@@ -1757,6 +1768,7 @@ DropdownButtonFormField<String>(
     DropdownMenuItem(value: 'TR4D', child: Text('TR4D')),
     DropdownMenuItem(value: 'TR6', child: Text('TR6')),
     DropdownMenuItem(value: 'TR8',  child: Text('TR8')),
+    DropdownMenuItem(value: 'TR9',  child: Text('TR9')),
   ],
 
   // ─── Corrección: refrescar el dado en cuanto cambie el tipo ───
@@ -1807,6 +1819,7 @@ Widget _buildSecondDieTypeSelector() {
             DropdownMenuItem(value: 'TR4D', child: Text('TR4D')),
             DropdownMenuItem(value: 'TR6',  child: Text('TR6')),
             DropdownMenuItem(value: 'TR8',  child: Text('TR8')),
+            DropdownMenuItem(value: 'TR9',  child: Text('TR9')),
           ],
           onChanged: (v) {
             if (v == null) return;
@@ -3415,6 +3428,7 @@ const Map<String, double> kFilletRadiusByDie = {
   'TR4D': 2.5,
   'TR6' : 6,
   'TR8' : 4,
+  'TR9' : 4,
 };
 
 // =================== Filete: arranque fijo + tangencia a rampa ===================
@@ -3542,7 +3556,7 @@ class AdjustableShapePainter extends CustomPainter {
   final bool showDieWidthDim;
   final double yOffsetPx;
   final double xOffsetPx;
-  bool get isTR6Family => dieType == 'TR6' || dieType == 'TR8';
+  bool get isTR6Family => dieType == 'TR6' || dieType == 'TR8' || dieType == 'TR9';
   final String dieTitle;
   final bool showDeltaRails;
   final String grade;
@@ -3617,6 +3631,7 @@ static const Map<String, Map<String, double>> _railPadBasePxByDieAndGrade = {
   'TR4D':      { 'Custom': 9.0, 'Low Carbon': 4.0, 'High Carbon': 4.0, 'Stainless': 4.0 },
   'TR6' :      { 'Custom': 9.0, 'Low Carbon': 4.0, 'High Carbon': 4.0, 'Stainless': 4.0 },
   'TR8' :      { 'Custom': 9.0, 'Low Carbon': 4.0, 'High Carbon': 4.0, 'Stainless': 4.0 },
+  'TR9' :      { 'Custom': 9.0, 'Low Carbon': 4.0, 'High Carbon': 4.0, 'Stainless': 4.0 },
 };
 
 // Pendiente (px por cada 1 mm de Entry por encima/debajo del baseline)
@@ -3625,6 +3640,7 @@ static const Map<String, Map<String, double>> _railPadGrowPxPerMmByDieAndGrade =
   'TR4D':      { 'Custom': 6.5, 'Low Carbon': 5.0, 'High Carbon': 4.5, 'Stainless': 4.5 },
   'TR6' :      { 'Custom': 6.5, 'Low Carbon': 5.0, 'High Carbon': 4.5, 'Stainless': 4.5 },
   'TR8' :      { 'Custom': 6.5, 'Low Carbon': 5.0, 'High Carbon': 4.5, 'Stainless': 4.5 },
+  'TR9' :      { 'Custom': 6.5, 'Low Carbon': 5.0, 'High Carbon': 4.5, 'Stainless': 4.5 },
 };
 
 // Valores *por material* de respaldo (si no pones entrada para algún die/material)
@@ -3670,7 +3686,7 @@ double get _railPadPx {
   // ↑ al inicio de paint(), junto a otras vars locales
   Offset? _tr4dRedEndTop; // extremo interior de la línea roja superior
   Offset? _tr4dRedEndBot; // extremo interior de la línea roja inferior
-  final bool isTR6Family = (dieType == 'TR6' || dieType == 'TR8');  // ✅
+  final bool isTR6Family = (dieType == 'TR6' || dieType == 'TR8' || dieType == 'TR9');
 
   final int dec = showInches ? 4 : 3;
   //final bool _showGreen = showDeltaRails && (grade != 'None');
@@ -3768,8 +3784,8 @@ final moradoAng = angleInferior;
 
 // === BLOQUE COMPLETO PARA FONDO CON TAPER VERTICAL (con filetes) ===
 
-// 2.5° para TR4/TR4D/TR6, 3.0° para TR8
-final double angleDeg = (dieType == 'TR8') ? 3.0 : 2.5;
+// 2.5° para TR4/TR4D/TR6, 3.0° para TR8 y TR9
+final double angleDeg = (dieType == 'TR8' || dieType == 'TR9') ? 3.0 : 2.5;
 final double angleRad = angleDeg * pi / 180;
 final double taperVertical = tan(angleRad) * borderRect.width;
 
@@ -4119,6 +4135,8 @@ Offset _tRamp(double t, double m, Offset corner) =>
 double targetGapMm;
 if (dieType == 'TR8') {
   targetGapMm = 18.0;        // ⬅︎ Aumenta este valor para “abrir” más los filetes en TR8
+} else if (dieType == 'TR9') {
+  targetGapMm = 18.0;        
 } else if (dieType == 'TR6') {
   targetGapMm = 14.478;
 } else { // TR4 / TR4D
