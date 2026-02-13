@@ -286,7 +286,7 @@ class _HubScreenState extends State<HubScreen> {
                   ],
                 ),
                 child: const Text(
-                  "Disclaimer: El uso de esta aplicación está sujeto a los términos y condiciones de Paramount Die.",
+                  "Disclaimer: Paramount Die Disclaimer.",
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
               ),

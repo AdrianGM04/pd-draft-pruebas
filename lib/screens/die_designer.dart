@@ -157,7 +157,7 @@ const Map<String, DieDims> kDieDims = {
   'TR4D': DieDims(11.430, 12.700),
   'TR6' : DieDims(17.780, 18.034),
   'TR8' : DieDims(21.082, 25.400),
-  'TR9' : DieDims(30.226, 21.082),
+  'TR9' : DieDims(21.082, 30.226),
 };
 
 // ───────── Back-Relief DIÁMETRO FIJO por tipo de dado (mm) ─────────
@@ -620,7 +620,7 @@ static const Map<String, List<int>> _presetAngles = {
   'TR4D': [9],
   'TR6' : [8, 12, 16],
   'TR8' : [12, 16, 18],
-  'TR9' : [12, 16, 18],
+  'TR9' : [18],
 };
 
 // Límites de Finished Diameter (mm) por Die Type y ángulo (Custom Die = OFF)
@@ -642,9 +642,7 @@ static const Map<String, Map<int, List<List<double>>>> _fdLimitsMm = {
     18: [[6.00, 13.00]],
   },
   'TR9': {
-    12: [[5.30, 13.00]],
-    16: [[4.50, 7.50]],
-    18: [[6.00, 13.00]],
+    18: [[12.60, 16.50]],
   },
 };
 
@@ -4136,7 +4134,7 @@ double targetGapMm;
 if (dieType == 'TR8') {
   targetGapMm = 18.0;        // ⬅︎ Aumenta este valor para “abrir” más los filetes en TR8
 } else if (dieType == 'TR9') {
-  targetGapMm = 18.0;        
+  targetGapMm = 24.003;        
 } else if (dieType == 'TR6') {
   targetGapMm = 14.478;
 } else { // TR4 / TR4D
