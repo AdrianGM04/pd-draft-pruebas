@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'dart:math';                              // ← para json.decode
 import 'dart:ui' as ui;
 import 'dart:io';
@@ -316,6 +318,47 @@ double get _maxDieWidthMm =>
   static const double kStageH = 900;  // alto base de tu página
   static const double kCanvasHNormal  = 420; // alto del área del dibujo
   static const double kCanvasHCapture = 650; // cuando capturas PDF
+
+  // ───── Zoom ─────
+  double _zoomLevel = 1.0;
+  Offset _panOffset = Offset.zero;
+  double _zoomAtPinchStart = 1.0;
+  Offset _panAtPinchStart = Offset.zero;
+  Size _viewportSize = Size.zero;
+  Offset _centeringOffset = Offset.zero;
+
+  static const double _zoomMin = 0.5;
+  static const double _zoomMax = 4.0;
+  static const double _zoomBtnStep = 0.10;
+  static const double _zoomScrollSensitivity = 500000.0; // higher = less zoom per scroll
+
+  bool get _isCtrlOrMeta => HardwareKeyboard.instance.logicalKeysPressed.any((k) =>
+      k == LogicalKeyboardKey.controlLeft  || k == LogicalKeyboardKey.controlRight ||
+      k == LogicalKeyboardKey.metaLeft     || k == LogicalKeyboardKey.metaRight);
+
+  /// Zoom around [focal] (in Transform-local space) keeping that content point fixed.
+  void _zoomAtPoint(double newZoom, Offset focal) {
+    newZoom = newZoom.clamp(_zoomMin, _zoomMax);
+    if ((newZoom - _zoomLevel).abs() < 0.0005) return;
+    final ratio = newZoom / _zoomLevel;
+    setState(() {
+      _panOffset = focal * (1 - ratio) + _panOffset * ratio;
+      _zoomLevel = newZoom;
+    });
+  }
+
+  /// Focal point at the center of the fitted content (for button zoom).
+  Offset get _fittedContentCenter {
+    final fitScale = min(_viewportSize.width / kStageW, _viewportSize.height / kStageH);
+    return Offset(kStageW * fitScale / 2, kStageH * fitScale / 2);
+  }
+
+  void _zoomIn()  => _zoomAtPoint((_zoomLevel + _zoomBtnStep).clamp(_zoomMin, _zoomMax), _fittedContentCenter);
+  void _zoomOut() => _zoomAtPoint((_zoomLevel - _zoomBtnStep).clamp(_zoomMin, _zoomMax), _fittedContentCenter);
+  void _zoomReset() => setState(() {
+    _zoomLevel = 1.0;
+    _panOffset = Offset.zero;
+  });
 
     // ───── Lista y selección actual del “Grade” ─────
   static const List<String> kGrades = [
@@ -1851,7 +1894,8 @@ static const double _kSelector1ExtraDxPx = -70.0; // 1º (Die Type) → más a l
 static const double _kSelector2ExtraDxPx =  330.0; // 2º (Second Die Type) → más a la DERECHA
 
 // cuánto subir (negativo) o bajar (positivo) los controles respecto al canvas
-static const double _kControlsUpShiftPx = -20.0; // súbelos ~40 px; ajusta a gusto
+static const double _kControlsUpShiftPx = -20.0;
+static const double _kControlsUpShiftPxTR9 = 20.0;
 
 Widget _buildCompareSelectorsAligned() {
   final _DieVisual dv1 = _visualForDie(_selectedDieType);
@@ -2908,6 +2952,32 @@ Widget build(BuildContext context) {
         fit: BoxFit.contain,
       ),
       actions: [
+        // ── Botones de zoom ──
+        IconButton(
+          icon: const Icon(Icons.remove_circle_outline, color: Colors.white),
+          tooltip: 'Zoom Out',
+          onPressed: _zoomOut,
+        ),
+        Tooltip(
+          message: 'Reset Zoom',
+          child: GestureDetector(
+            onTap: _zoomReset,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                '${(_zoomLevel * 100).round()}%',
+                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.add_circle_outline, color: Colors.white),
+          tooltip: 'Zoom In',
+          onPressed: _zoomIn,
+        ),
+        const SizedBox(width: 8),
+        // Cuadro de versión
         Padding(
           padding: const EdgeInsets.only(right: 16),
           child: Center(
@@ -2964,7 +3034,7 @@ body: LayoutBuilder(
         if (!capturing)
           Expanded(
             child: Transform.translate(
-              offset: const Offset(0, _kControlsUpShiftPx),
+              offset: Offset(0, _selectedDieType == 'TR9' ? _kControlsUpShiftPxTR9 : _kControlsUpShiftPx),
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Center(
@@ -2980,12 +3050,84 @@ body: LayoutBuilder(
       ),
     );
 
-    // ── FittedBox: centra y escala el stage para que SIEMPRE quepa ──
-    return Center(
-      child: FittedBox(
-        fit: BoxFit.contain,
-        alignment: Alignment.center,
-        child: stage,
+    _viewportSize = constraints.biggest;
+
+    // Offset que Center aplica para centrar el FittedBox
+    final fitScale = min(constraints.maxWidth / kStageW, constraints.maxHeight / kStageH);
+    final fittedW  = kStageW * fitScale;
+    final fittedH  = kStageH * fitScale;
+    _centeringOffset = Offset(
+      (constraints.maxWidth  - fittedW) / 2,
+      (constraints.maxHeight - fittedH) / 2,
+    );
+
+    return Listener(
+      onPointerSignal: (event) {
+        if (event is PointerScaleEvent) {
+          final focal = event.localPosition - _centeringOffset;
+          
+          // Si Ctrl/Cmd está presionado, que se haga un zoom suave.
+          if (_isCtrlOrMeta) {
+            const base = 1.15; 
+            final steps = log(event.scale) / log(base);
+            final stepsClamped = steps.clamp(-1.0, 1.0);
+            final factor = pow(base, stepsClamped).toDouble();
+
+            _zoomAtPoint(_zoomLevel * factor, focal);
+
+          } else {
+            _zoomAtPoint(_zoomLevel * event.scale, focal);
+          }
+        } else if (event is PointerScrollEvent && _isCtrlOrMeta) {
+          final focal = event.localPosition - _centeringOffset;
+          // 120.0 = 1 "notch" clásico de mouse wheel.
+          // En trackpad el delta puede ser enorme; esto lo normaliza.
+          final ticks = (event.scrollDelta.dy / 120.0).clamp(-10.0, 10.0);
+          
+          // 1% por tick: dy negativo (scroll up) => zoom in
+          final factor = pow(1.15, -ticks).toDouble();
+          
+          _zoomAtPoint(_zoomLevel * factor, focal);
+        }
+      },
+      onPointerPanZoomStart: (_) {
+        if (_isCtrlOrMeta) return;
+        _zoomAtPinchStart = _zoomLevel;
+        _panAtPinchStart  = _panOffset;
+      },
+      onPointerPanZoomUpdate: (event) {
+        debugPrint('PANZOOM: scale=${event.scale} pan=${event.panDelta}');
+        final focal = event.localPosition - _centeringOffset;
+        // Si Ctrl/Cmd está presionado, lo tratamos como zoom por wheel (suave)
+        if (_isCtrlOrMeta) {
+          // event.scale suele venir como algo tipo 1.0x, pero a veces muy agresivo.
+          // Convertimos a "ticks" usando log para que sea acumulativo y estable.
+          final ticks = (log(event.scale) / log(1.01)).clamp(-10.0, 10.0); // 1% por tick
+          final factor = pow(1.01, ticks).toDouble();
+          _zoomAtPoint(_zoomLevel * factor, focal);
+          return;
+        }
+
+        // Pinch normal
+        final newZoom = (_zoomAtPinchStart * event.scale).clamp(_zoomMin, _zoomMax);
+        final ratio = newZoom / _zoomAtPinchStart;
+        
+        setState(() {
+          _panOffset = focal * (1 - ratio) + _panAtPinchStart * ratio;
+          _zoomLevel = newZoom;
+        });
+      },
+      child: Center(
+        child: Transform(
+          transform: Matrix4.identity()
+            ..translate(_panOffset.dx, _panOffset.dy)
+            ..scale(_zoomLevel, _zoomLevel),
+          child: FittedBox(
+            fit: BoxFit.contain,
+            alignment: Alignment.center,
+            child: stage,
+          ),
+        ),
       ),
     );
   },

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import 'dart:math' show exp, min;
 import 'die_designer.dart';
 import 'dart:typed_data';
 import 'dart:convert';
@@ -112,8 +114,43 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
 
 // Se inicializan todas las variables, listas, arrays, y controladores de texto para que la app funcione
 class _OtraPantallaState extends State<OtraPantalla> {
-  double zoomLevel = 1; // 1.0 = normal, >1 agranda, <1 reduce
-  late final ScrollController _rightPanelCtrl;
+  // ───── Zoom ─────
+  double _zoomLevel = 1.0;
+  Offset _panOffset = Offset.zero;
+  double _zoomAtPinchStart = 1.0;
+  Offset _panAtPinchStart = Offset.zero;
+  Size _viewportSize = Size.zero;
+  Offset _centeringOffset = Offset.zero;
+
+  static const double _kStageW = 1500;
+  static const double _kStageH = 920;
+  static const double _zoomMin = 0.5;
+  static const double _zoomMax = 3.0;
+  static const double _zoomBtnStep = 0.10;
+  static const double _zoomScrollSensitivity = 600.0;
+
+  bool get _isCtrlOrMeta => HardwareKeyboard.instance.logicalKeysPressed.any((k) =>
+      k == LogicalKeyboardKey.controlLeft  || k == LogicalKeyboardKey.controlRight ||
+      k == LogicalKeyboardKey.metaLeft     || k == LogicalKeyboardKey.metaRight);
+
+  void _zoomAtPoint(double newZoom, Offset focal) {
+    newZoom = newZoom.clamp(_zoomMin, _zoomMax);
+    if ((newZoom - _zoomLevel).abs() < 0.0005) return;
+    final ratio = newZoom / _zoomLevel;
+    setState(() {
+      _panOffset = focal * (1 - ratio) + _panOffset * ratio;
+      _zoomLevel = newZoom;
+    });
+  }
+
+  Offset get _fittedContentCenter {
+    final fitScale = min(_viewportSize.width / _kStageW, _viewportSize.height / _kStageH);
+    return Offset(_kStageW * fitScale / 2, _kStageH * fitScale / 2);
+  }
+
+  void _zoomIn()  => _zoomAtPoint((_zoomLevel + _zoomBtnStep).clamp(_zoomMin, _zoomMax), _fittedContentCenter);
+  void _zoomOut() => _zoomAtPoint((_zoomLevel - _zoomBtnStep).clamp(_zoomMin, _zoomMax), _fittedContentCenter);
+  void _zoomReset() => setState(() { _zoomLevel = 1.0; _panOffset = Offset.zero; });
   final TextEditingController diesController = TextEditingController();
   final TextEditingController initialDiameterController = TextEditingController();
   final TextEditingController finalDiameterController = TextEditingController();
@@ -330,7 +367,6 @@ class _OtraPantallaState extends State<OtraPantalla> {
   @override
   void initState() {
     super.initState();
-    _rightPanelCtrl = ScrollController();
     limitController.text = temperatureLimit.toString();
     finalReductionPercentage = sheets[0].finalReductionPercentage;
     maximumReductionPercentage = sheets[0].maximumReductionPercentage;
@@ -398,7 +434,6 @@ class _OtraPantallaState extends State<OtraPantalla> {
 
   @override
   void dispose() {
-    _rightPanelCtrl.dispose();
     _productNameFocusNode.dispose();
     _descriptionFocusNode.dispose();
     _clientNameFocusNode.dispose();
@@ -3869,6 +3904,32 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
               tooltip: 'Redo',
               onPressed: _performRedo,
             ),
+            const SizedBox(width: 8),
+            // ── Zoom controls ──
+            IconButton(
+              icon: const Icon(Icons.remove_circle_outline, color: Colors.white),
+              tooltip: 'Zoom Out',
+              onPressed: _zoomOut,
+            ),
+            Tooltip(
+              message: 'Reset Zoom',
+              child: GestureDetector(
+                onTap: _zoomReset,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(
+                    '${(_zoomLevel * 100).round()}%',
+                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline, color: Colors.white),
+              tooltip: 'Zoom In',
+              onPressed: _zoomIn,
+            ),
+            const SizedBox(width: 8),
             // Cuadro de versión
             Padding(
               padding: const EdgeInsets.only(right: 16),
@@ -3896,7 +3957,21 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
             ),
           ],
         ),
-        body: Column(
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            _viewportSize = constraints.biggest;
+            final fitScale = min(constraints.maxWidth / _kStageW, constraints.maxHeight / _kStageH);
+            final fittedW  = _kStageW * fitScale;
+            final fittedH  = _kStageH * fitScale;
+            _centeringOffset = Offset(
+              (constraints.maxWidth  - fittedW) / 2,
+              (constraints.maxHeight - fittedH) / 2,
+            );
+
+            final stage = SizedBox(
+              width: _kStageW,
+              height: _kStageH,
+              child: Column(
           children: [
             Container(
               color: Color(0xFFF1F4F8),
@@ -5947,16 +6022,7 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     color: const Color(0xFFF5F5F5),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return Scrollbar(
-                          controller: _rightPanelCtrl,
-                          thumbVisibility: true,
-                          child: SingleChildScrollView(
-                            controller: _rightPanelCtrl,
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 70),
-                              child: Column(
+                    child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Column(
@@ -6492,11 +6558,6 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
                                   ),
                                 ],
                               ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
                   ),
                 ),
               ],
@@ -6608,8 +6669,49 @@ double? _pressureDieSizeRounded(int index, List<dynamic> diametros) {
           ),
             ],
           ),
-        ),
-      ),  // WillPopScope
+        ); // end stage SizedBox
+
+            return Listener(
+              onPointerSignal: (event) {
+                if (event is PointerScaleEvent) {
+                  final focal = event.localPosition - _centeringOffset;
+                  _zoomAtPoint(_zoomLevel * event.scale, focal);
+                } else if (event is PointerScrollEvent && _isCtrlOrMeta) {
+                  final factor = exp(-event.scrollDelta.dy / _zoomScrollSensitivity);
+                  final focal = event.localPosition - _centeringOffset;
+                  _zoomAtPoint(_zoomLevel * factor, focal);
+                }
+              },
+              onPointerPanZoomStart: (_) {
+                _zoomAtPinchStart = _zoomLevel;
+                _panAtPinchStart  = _panOffset;
+              },
+              onPointerPanZoomUpdate: (event) {
+                final newZoom = (_zoomAtPinchStart * event.scale).clamp(_zoomMin, _zoomMax);
+                final ratio = newZoom / _zoomAtPinchStart;
+                final focal = event.localPosition - _centeringOffset;
+                setState(() {
+                  _panOffset = focal * (1 - ratio) + _panAtPinchStart * ratio;
+                  _zoomLevel = newZoom;
+                });
+              },
+              child: Center(
+                child: Transform(
+                  transform: Matrix4.identity()
+                    ..translate(_panOffset.dx, _panOffset.dy)
+                    ..scale(_zoomLevel, _zoomLevel),
+                  child: FittedBox(
+                    fit: BoxFit.contain,
+                    alignment: Alignment.center,
+                    child: stage,
+                  ),
+                ),
+              ),
+            );
+          },
+        ), // end LayoutBuilder (body)
+      ),    // Scaffold
+      ),    // WillPopScope
     ),      // Actions
     );      // Shortcuts
   }
